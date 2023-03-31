@@ -193,7 +193,7 @@ iex(16)> trunc(3.58)
 ![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
 「　👆　小数点以下四捨五入と　小数点以下切り捨てだぜ」  
 
-## 関数のドキュメント
+## 関数、演算子のドキュメント
 
 ```shell
 iex(17)> h trunc/1
@@ -222,7 +222,7 @@ Allowed in guard tests. Inlined by the compiler.
 ```
 
 ![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
-「　👆　`trunc` 関数の説明を見るヘルプ・コマンドだと思うんだが、なんだか分かんないぜ」  
+「　👆　`trunc` 関数の説明を見るヘルプ・コマンドだと思うんだが、 `/1` が、なんだか分かんないぜ」  
 
 ```shell
 iex(18)> h Kernel.trunc/1
@@ -251,4 +251,98 @@ Allowed in guard tests. Inlined by the compiler.
 ```
 
 ![kifuwarabe-futsu.png](https://crieit.now.sh/upload_images/beaf94b260ae2602ca8cf7f5bbc769c261daf8686dbda.png)  
-「　👆　何なんだろなあ」  
+「　👆　何なんだろなあ」
+
+```shell
+iex(19)> h Kernel.+/2
+
+                                def left + right
+
+  @spec integer() + integer() :: integer()
+  @spec float() + float() :: float()
+  @spec integer() + float() :: float()
+  @spec float() + integer() :: float()
+
+guard: true
+
+Arithmetic addition operator.
+
+Allowed in guard tests. Inlined by the compiler.
+
+## Examples
+
+    iex> 1 + 2
+    3
+
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　演算子の説明も同じように見えるが `/2` って何なんだろな？」  
+
+## 論理値
+
+```shell
+iex(20)> true
+true
+iex(21)> true == false
+false
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　論理値だぜ」  
+
+```shell
+iex(22)> is_boolean(true)
+true
+iex(23)> is_boolean(1)
+false
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　型チェックもできるようだぜ」  
+
+## Atoms
+
+```shell
+iex(24)> :apple
+:apple
+iex(25)> :orange
+:orange
+iex(26)> :watermelon
+:watermelon
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　アトムは　自分自身を表す定数か何かか。変わってんな」  
+
+```shell
+iex(27)> :apple == :apple
+true
+iex(28)> :apple == :orange
+false
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　比較もできるぜ」  
+
+```shell
+iex(29)> true == :true
+true
+iex(30)> is_atom(false)
+true
+iex(31)> is_boolean(:false)
+true
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　予約語も　オブジェクトなのかなあ？　分からんなあ」  
+
+```shell
+iex(32)> is_atom(Hello)
+true
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　大文字で始まる英単語もアトムだそうだぜ。分からんなあ」  
+
+## 文字列
