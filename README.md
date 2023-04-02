@@ -1,2 +1,3 @@
-# kifuwarabe-wcsc33
-きふわらべ for WCSC33
+# elixir-practice
+
+elixirの練習  
