@@ -1,4 +1,9 @@
 defmodule Math do
-  def zero?(0), do: true
-  def zero?(x) when is_integer(x), do: false
+  def double_each([head | tail]) do
+    [head * 2 | double_each(tail)]
+  end
+
+  def double_each([]) do
+    []
+  end
 end

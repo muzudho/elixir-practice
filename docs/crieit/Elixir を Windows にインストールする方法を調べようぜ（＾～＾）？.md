@@ -1951,6 +1951,118 @@ iex(2)> Concat.join "Hello", "world", "_"
 "Hello_world"
 ```
 
-# 📅 2023-04-02 sun 21:59
+# Recursion
 
-## Recursion
+📅 2023-04-02 sun 21:59  
+
+## Loops through recursion
+
+`recursion.exs` : （新規作成）  
+
+```elixir
+defmodule Recursion do
+  def print_multiple_times(msg, n) when n > 0 do
+    IO.puts(msg)
+    print_multiple_times(msg, n - 1)
+  end
+
+  def print_multiple_times(_msg, 0) do
+    :ok
+  end
+end
+
+Recursion.print_multiple_times("Hello!", 3)
+# Hello!
+# Hello!
+# Hello!
+:ok
+```
+
+Command line:  
+
+```shell
+elixir recursion.exs
+Hello!
+Hello!
+Hello!
+```
+
+```shell
+iex
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> Recursion.print_multiple_times "Hello!", -1
+** (UndefinedFunctionError) function Recursion.print_multiple_times/2 is undefined (module Recursion is not available)
+    Recursion.print_multiple_times("Hello!", -1)
+    iex:1: (file)
+```
+
+## Reduce and map algorithms
+
+### 例1
+
+`math.exs` : （既存のはリネームして、新規作成）  
+
+```elixir
+defmodule Math do
+  def sum_list([head | tail], accumulator) do
+    sum_list(tail, head + accumulator)
+  end
+
+  def sum_list([], accumulator) do
+    accumulator
+  end
+end
+
+IO.puts Math.sum_list([1, 2, 3], 0) #=> 6
+```
+
+Command line:  
+
+```shell
+elixir math.exs
+6
+```
+
+### 例2
+
+`math.exs` : （既存のはリネームして、新規作成）  
+
+```elixir
+defmodule Math do
+  def double_each([head | tail]) do
+    [head * 2 | double_each(tail)]
+  end
+
+  def double_each([]) do
+    []
+  end
+end
+```
+
+Command line:  
+
+```shell
+iex math.exs
+iex(1)> Math.double_each([1, 2, 3]) #=> [2, 4, 6]
+[2, 4, 6]
+```
+
+### Enumを使った例
+
+```shell
+iex(2)> Enum.reduce([1, 2, 3], 0, fn(x, acc) -> x + acc end)
+6
+iex(3)> Enum.map([1, 2, 3], fn(x) -> x * 2 end)
+[2, 4, 6]
+```
+
+### キャプチャー構文を使った例
+
+```shell
+iex(4)> Enum.reduce([1, 2, 3], 0, &+/2)
+6
+iex(5)> Enum.map([1, 2, 3], &(&1 * 2))
+[2, 4, 6]
+```
+
+# Enumerables and streams
