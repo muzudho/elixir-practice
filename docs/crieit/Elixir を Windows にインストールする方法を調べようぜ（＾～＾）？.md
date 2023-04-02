@@ -1746,6 +1746,8 @@ IO.puts Math.do_sum(1, 2) #=> ** (UndefinedFunctionError)
 ![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
 「　👆　プライベート関数は `defp` か？」  
 
+例:  （内容を書き換え）
+
 ```elixir
 defmodule Math do
   def zero?(0) do
@@ -1765,3 +1767,190 @@ IO.puts Math.zero?(0.0)       #=> ** (FunctionClauseError)
 
 ![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
 「　👆　ブール型関数には `?` を付けるのかだぜ？」  
+
+`math.exs` : （内容を書き換え）
+
+```elixir
+defmodule Math do
+  def zero?(0), do: true
+  def zero?(x) when is_integer(x), do: false
+end
+```
+
+Input:  
+
+```shell
+elixir math.exs
+```
+
+Output:  
+
+```plaintext
+warning: redefining module Math (current version loaded from Elixir.Math.beam)
+  math.exs:1
+```
+
+## Function capturing
+
+```shell
+iex math.exs
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> Math.zero?(0)
+true
+iex(2)> fun = &Math.zero?/1
+&Math.zero?/1
+iex(3)> is_function(fun)
+true
+iex(4)> fun.(0)
+true
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　さっぱり　何やってるのか　分からん」  
+
+```shell
+iex(5)> &is_function/1
+&:erlang.is_function/1
+iex(6)> (&is_function/1).(fun)
+true
+```
+
+### 演算子のキャプチャー
+
+```shell
+iex(7)> add = &+/2
+&:erlang.+/2
+iex(8)> add.(1, 2)
+3
+```
+
+#### 関数を作成するためのショートカット
+
+```shell
+iex(9)> fun = &(&1 + 1)
+#Function<42.3316493/1 in :erl_eval.expr/6>
+iex(10)> fun.(1)
+2
+iex(11)> fun2 = &"Good #{&1}"
+#Function<42.3316493/1 in :erl_eval.expr/6>
+iex(12)> fun2.("morning")
+"Good morning"
+```
+
+## Default arguments
+
+例:  
+
+```elixir
+defmodule Concat do
+  def join(a, b, sep \\ " ") do
+    a <> sep <> b
+  end
+end
+
+IO.puts Concat.join("Hello", "world")      #=> Hello world
+IO.puts Concat.join("Hello", "world", "_") #=> Hello_world
+```
+
+`default_test.ex` : （ファイル新規作成）  
+
+```elixir
+defmodule DefaultTest do
+  def dowork(x \\ "hello") do
+    x
+  end
+end
+```
+
+Input: （コマンドライン）  
+
+```shell
+elixir default_test.ex
+```
+
+```shell
+iex default_test.ex
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> DefaultTest.dowork
+"hello"
+iex(2)> DefaultTest.dowork 123
+123
+iex(3)> DefaultTest.dowork
+"hello"
+```
+
+### 関数ヘッドを作成する例
+
+`concat.exs` : （新規作成）  
+
+```shell
+defmodule Concat do
+  # A function head declaring defaults
+  def join(a, b \\ nil, sep \\ " ")
+
+  def join(a, b, _sep) when is_nil(b) do
+    a
+  end
+
+  def join(a, b, sep) do
+    a <> sep <> b
+  end
+end
+
+IO.puts Concat.join("Hello", "world")      #=> Hello world
+IO.puts Concat.join("Hello", "world", "_") #=> Hello_world
+IO.puts Concat.join("Hello")               #=> Hello
+```
+
+コマンドライン:  
+
+```shell
+elixir concat.exs
+Hello world
+Hello_world
+Hello
+```
+
+### 関数定義が重複しないように注意する例
+
+`concat.ex` : （新規作成）  
+
+```elixir
+defmodule Concat do
+  def join(a, b) do
+    IO.puts("***First join")
+    a <> b
+  end
+
+  def join(a, b, sep \\ " ") do
+    IO.puts("***Second join")
+    a <> sep <> b
+  end
+end
+```
+
+コマンドライン:  
+
+```shell
+elixir concat.ex  
+warning: this clause for join/2 cannot match because a previous clause at line 2 always matches
+  concat.ex:7
+```
+
+```
+iex concat.ex
+warning: this clause for join/2 cannot match because a previous clause at line 2 always matches
+  concat.ex:7
+
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> Concat.join "Hello", "world"
+***First join
+"Helloworld"
+iex(2)> Concat.join "Hello", "world", "_"
+***Second join
+"Hello_world"
+```
+
+# 📅 2023-04-02 sun 21:59
+
+## Recursion
