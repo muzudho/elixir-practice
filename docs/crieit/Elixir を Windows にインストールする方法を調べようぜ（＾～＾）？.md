@@ -2773,3 +2773,216 @@ iex(1)> alias MyApp.{Foo, Bar, Baz}
 # 14. Module attributes
 
 📅 2023-04-03 mon 20:47  
+
+## As annotations
+
+📄 `o14o1o0_as_annotations.ex` ファイル新規作成  
+
+```elixir
+defmodule MyServer do
+  @moduledoc "My server code."
+end
+```
+
+Command line:  
+
+```shell
+elixir o14o1o0_as_annotations.ex
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　反応無しだぜ」  
+
+📄 `o14o2o0_math.ex` ファイル新規作成  
+
+```elixir
+defmodule Math do
+  @moduledoc """
+  Provides math-related functions.
+
+  ## Examples
+
+      iex> Math.sum(1, 2)
+      3
+
+  """
+
+  @doc """
+  Calculates the sum of two numbers.
+  """
+  def sum(a, b), do: a + b
+end
+```
+
+Command line:  
+
+```shell
+elixirc o14o2o0_math.ex
+warning: redefining module Math (current version loaded from Elixir.Math.beam)
+  o14o2o0_math.ex:1
+
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>iex
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> h Math # Access the docs for the module Math
+
+                                      Math
+
+Provides math-related functions.
+
+## Examples
+
+    iex> Math.sum(1, 2)
+    3
+
+iex(2)> h Math.sum # Access the docs for the sum function
+
+                                 def sum(a, b)
+
+Calculates the sum of two numbers.
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　いわゆるドキュメント・コメントだな」  
+
+## As “constants”
+
+📄 `o14o3o0_my_server.ex` ファイル新規作成  
+
+```elixir
+defmodule MyServer do
+  @initial_state %{host: "127.0.0.1", port: 3456}
+  IO.inspect @initial_state
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o14o3o0_my_server.ex
+%{host: "127.0.0.1", port: 3456}
+```
+
+📄 `o14o4o0_my_server_failed.ex` ファイル新規作成  
+
+```elixir
+defmodule MyServer do
+  @unknown
+end
+warning: undefined module attribute @unknown, please remove access to @unknown or explicitly set it before access
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o14o4o0_my_server_failed.ex
+
+== Compilation error in file o14o4o0_my_server_failed.ex ==
+** (SyntaxError) o14o4o0_my_server_failed.ex:4:1: syntax error before: warning
+    |
+  4 | warning: undefined module attribute @unknown, please remove access to @unknown or explicitly set it before access
+    | ^
+    (elixir 1.14.3) lib/kernel/parallel_compiler.ex:340: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/7
+```
+
+📄 `o14o5o0_my_server.exs` ファイル新規作成  
+
+```elixir
+defmodule O14o5o0MyServer do
+  @my_data 14
+  def first_data, do: @my_data
+  @my_data 13
+  def second_data, do: @my_data
+end
+
+MyServer.first_data #=> 14
+MyServer.second_data #=> 13
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o14o5o0_my_server.exs
+```
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixir o14o5o0_my_server.exs
+warning: redefining module O14o5o0MyServer (current version loaded from Elixir.O14o5o0MyServer.beam)
+  o14o5o0_my_server.exs:1
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　分からん」  
+
+例:  
+
+```elixir
+defmodule MyApp.Status do
+  @service URI.parse("https://example.com")
+  def status(email) do
+    SomeHttpClient.get(@service)
+  end
+end
+```
+
+例:  
+
+```elixir
+defmodule MyApp.Status do
+  def status(email) do
+    SomeHttpClient.get(%URI{
+      authority: "example.com",
+      host: "example.com",
+      port: 443,
+      scheme: "https"
+    })
+  end
+end
+```
+
+例:  
+
+```elixir
+def some_function, do: do_something_with(@example)
+def another_function, do: do_something_else_with(@example)
+```
+
+例:  
+
+```elixir
+def some_function, do: do_something_with(example())
+def another_function, do: do_something_else_with(example())
+defp example, do: @example
+```
+
+## Accumulating attributes
+
+例:  
+
+```elixir
+defmodule Foo do
+  Module.register_attribute __MODULE__, :param, accumulate: true
+
+  @param :foo
+  @param :bar
+  # here @param == [:bar, :foo]
+end
+```
+
+## As temporary storage
+
+例:  
+
+```elixir
+defmodule MyTest do
+  use ExUnit.Case, async: true
+
+  @tag :external
+  @tag os: :unix
+  test "contacts external service" do
+    # ...
+  end
+end
+```
+
+# 15. Structs
+
