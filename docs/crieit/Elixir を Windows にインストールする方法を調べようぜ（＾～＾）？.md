@@ -2066,3 +2066,284 @@ iex(5)> Enum.map([1, 2, 3], &(&1 * 2))
 ```
 
 # Enumerables and streams
+
+📅 2023-04-03 mon 18:29  
+
+📖 [Enumerables and streams](https://elixir-lang.org/getting-started/enumerables-and-streams.html)  
+
+```shell
+iex(1)> Enum.map([1, 2, 3], fn x -> x * 2 end)
+[2, 4, 6]
+iex(2)> Enum.map(%{1 => 2, 3 => 4}, fn {k, v} -> k * v end)
+[2, 12]
+```
+
+```shell
+iex(3)> Enum.map(1..3, fn x -> x * 2 end)
+[2, 4, 6]
+iex(4)> Enum.reduce(1..3, 0, &+/2)
+6
+```
+
+## Eager vs Lazy
+
+```shell
+iex(5)> odd? = &(rem(&1, 2) != 0)
+#Function<42.3316493/1 in :erl_eval.expr/6>
+iex(6)> Enum.filter(1..3, odd?)
+[1, 3]
+```
+
+```shell
+iex(7)> 1..100_000 |> Enum.map(&(&1 * 3)) |> Enum.filter(odd?) |> Enum.sum()
+7500000000
+```
+
+## The pipe operator
+
+```shell
+iex(8)> Enum.sum(Enum.filter(Enum.map(1..100_000, &(&1 * 3)), odd?))
+7500000000
+```
+
+## Streams
+
+```shell
+iex(9)> 1..100_000 |> Stream.map(&(&1 * 3)) |> Stream.filter(odd?) |> Enum.sum
+7500000000
+```
+
+```shell
+iex(10)> 1..100_000 |> Stream.map(&(&1 * 3))
+#Stream<[enum: 1..100000, funs: [#Function<48.124013645/1 in Stream.map/2>]]>
+```
+
+```shell
+iex(11)> 1..100_000 |> Stream.map(&(&1 * 3)) |> Stream.filter(odd?)
+#Stream<[
+  enum: 1..100000,
+  funs: [#Function<48.124013645/1 in Stream.map/2>,
+   #Function<40.124013645/1 in Stream.filter/2>]
+]>
+```
+
+```shell
+iex(12)> stream = Stream.cycle([1, 2, 3])
+#Function<63.124013645/2 in Stream.unfold/2>
+iex(13)> Enum.take(stream, 10)
+[1, 2, 3, 1, 2, 3, 1, 2, 3, 1]
+```
+
+```shell
+iex(14)> stream = Stream.unfold("hełło", &String.next_codepoint/1)
+#Function<63.124013645/2 in Stream.unfold/2>
+iex(15)> Enum.take(stream, 3)
+["h", "e", "?"]
+```
+
+```shell
+iex(16)> stream = File.stream!("path/to/file")
+%File.Stream{
+  path: "path/to/file",
+  modes: [:raw, :read_ahead, :binary],
+  line_or_bytes: :line,
+  raw: true
+}
+iex(17)> Enum.take(stream, 10)
+** (File.Error) could not stream "path/to/file": no such file or directory
+    (elixir 1.14.3) lib/file/stream.ex:83: anonymous fn/3 in Enumerable.File.Stream.reduce/3
+    (elixir 1.14.3) lib/stream.ex:1609: anonymous fn/5 in Stream.resource/3
+    (elixir 1.14.3) lib/enum.ex:3448: Enum.take/2
+    iex:17: (file)
+```
+
+# Processes
+
+📖 [Processes](https://elixir-lang.org/getting-started/processes.html)  
+
+## spawn
+
+```shell
+iex(17)> spawn(fn -> 1 + 2 end)
+#PID<0.124.0>
+```
+
+```shell
+iex(18)> pid = spawn(fn -> 1 + 2 end)
+#PID<0.126.0>
+iex(19)> Process.alive?(pid)
+false
+```
+
+```shell
+iex(20)> self()
+#PID<0.105.0>
+iex(21)> Process.alive?(self())
+true
+```
+
+## send and receive
+
+```shell
+iex(22)> send(self(), {:hello, "world"})
+{:hello, "world"}
+iex(23)> receive do
+...(23)>   {:hello, msg} -> msg
+...(23)>   {:world, _msg} -> "won't match"
+...(23)> end
+"world"
+```
+
+```shell
+iex(24)> receive do
+...(24)>   {:hello, msg}  -> msg
+...(24)> after
+...(24)>   1_000 -> "nothing after 1s"
+...(24)> end
+"nothing after 1s"
+```
+
+```shell
+iex(25)> parent = self()
+#PID<0.105.0>
+iex(26)> spawn(fn -> send(parent, {:hello, self()}) end)
+#PID<0.142.0>
+iex(27)> receive do
+...(27)>   {:hello, pid} -> "Got hello from #{inspect pid}"
+...(27)> end
+"Got hello from #PID<0.142.0>"
+```
+
+```shell
+iex(28)> send(self(), :hello)
+:hello
+iex(29)> flush()       
+:hello
+:ok
+```
+
+## Links
+
+```shell
+iex(30)> spawn(fn -> raise "oops" end)
+#PID<0.149.0>
+iex(31)>
+18:59:46.962 [error] Process #PID<0.149.0> raised an exception
+** (RuntimeError) oops
+    iex:30: (file)
+```
+
+```shell
+iex(31)> self()
+#PID<0.105.0>
+iex(32)> spawn_link(fn -> raise "oops" end)
+
+19:00:39.325 [error] Process #PID<0.152.0> raised an exception
+** (RuntimeError) oops
+    iex:32: (file)
+** (EXIT from #PID<0.105.0>) shell process exited with reason: an exception was raised:
+    ** (RuntimeError) oops
+        iex:32: (file)
+
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+```
+
+## Tasks
+
+```shell
+iex(32)> spawn_link(fn -> raise "oops" end)
+
+19:00:39.325 [error] Process #PID<0.152.0> raised an exception
+** (RuntimeError) oops
+    iex:32: (file)
+** (EXIT from #PID<0.105.0>) shell process exited with reason: an exception was raised:
+    ** (RuntimeError) oops
+        iex:32: (file)
+
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> Task.start(fn -> raise "oops" end)
+
+19:01:21.700 [error] Task #PID<0.155.0> started from #PID<0.153.0> terminating
+** (RuntimeError) oops
+    iex:1: (file)
+    (elixir 1.14.3) src/elixir.erl:309: anonymous fn/4 in :elixir.eval_external_handler/1
+    (elixir 1.14.3) lib/task/supervised.ex:89: Task.Supervised.invoke_mfa/2
+Function: #Function<43.3316493/0 in :erl_eval.expr/6>
+    Args: []
+{:ok, #PID<0.155.0>}
+```
+
+## State
+
+`kv.exs` : （ファイル新規作成）  
+
+```shell
+defmodule KV do
+  def start_link do
+    Task.start_link(fn -> loop(%{}) end)
+  end
+
+  defp loop(map) do
+    receive do
+      {:get, key, caller} ->
+        send caller, Map.get(map, key)
+        loop(map)
+      {:put, key, value} ->
+        loop(Map.put(map, key, value))
+    end
+  end
+end
+```
+
+Command line:  
+
+```shell
+iex kv.exs
+```
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>iex kv.exs
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> {:ok, pid} = KV.start_link()
+{:ok, #PID<0.112.0>}
+iex(2)> send(pid, {:get, :hello, self()})
+{:get, :hello, #PID<0.110.0>}
+iex(3)> flush()
+nil
+:ok
+```
+
+```shell
+iex(4)> send(pid, {:put, :hello, :world})
+{:put, :hello, :world}
+iex(5)> send(pid, {:get, :hello, self()})
+{:get, :hello, #PID<0.110.0>}
+iex(6)> flush()
+:world
+:ok
+```
+
+```shell
+iex(7)> Process.register(pid, :kv)
+true
+iex(8)> send(:kv, {:get, :hello, self()})
+{:get, :hello, #PID<0.110.0>}
+iex(9)> flush()
+:world
+:ok
+```
+
+```shell
+iex(10)> {:ok, pid} = Agent.start_link(fn -> %{} end)
+{:ok, #PID<0.122.0>}
+iex(11)> Agent.update(pid, fn map -> Map.put(map, :hello, :world) end)
+:ok
+iex(12)> Agent.get(pid, fn map -> Map.get(map, :hello) end)
+:world
+```
+
+# 12. IO and the file system
+
+📅 2023-04-03 mon 19:08  
+
+📖 [12. IO and the file system](https://elixir-lang.org/getting-started/io-and-the-file-system.html)  
