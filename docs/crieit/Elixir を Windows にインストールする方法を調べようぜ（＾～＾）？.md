@@ -2346,4 +2346,430 @@ iex(12)> Agent.get(pid, fn map -> Map.get(map, :hello) end)
 
 📅 2023-04-03 mon 19:08  
 
-📖 [12. IO and the file system](https://elixir-lang.org/getting-started/io-and-the-file-system.html)  
+📖 [12. IO and the file system](https://elixir-lang.org/getting-started/io-and-the-file-system.html)
+
+## The `IO` module
+
+```shell
+iex(13)> IO.puts("hello world")
+hello world
+:ok
+iex(14)> IO.gets("yes or no? ")
+yes or no? y
+"y\n"
+```
+
+```shell
+iex(15)> IO.puts(:stderr, "hello world")
+hello world
+:ok
+```
+
+## The `File` module
+
+📄 `o12o0_hello.bin` ファイル新規作成  
+
+```shell
+iex(16)> {:ok, file} = File.open("./o12o0_hello.bin", [:write])
+{:ok, #PID<0.131.0>}
+iex(17)> IO.binwrite(file, "world")
+:ok
+iex(18)> File.close(file)
+:ok
+iex(19)> File.read("path/to/file/hello")
+{:error, :enoent}
+iex(20)> File.read("./o12o0_hello.bin")
+{:ok, "world"}
+```
+
+```shell
+iex(21)> File.read("./o12o0_hello.bin")
+{:ok, "world"}
+iex(22)> File.read!("./o12o0_hello.bin") 
+"world"
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　関数名の後ろに `!` なんか付けていいのか」  
+
+```shell
+iex(23)> File.read("./unknown.bin")     
+{:error, :enoent}
+iex(24)> File.read!("./unknown.bin") 
+** (File.Error) could not read file "./unknown.bin": no such file or directory
+    (elixir 1.14.3) lib/file.ex:358: File.read!/1
+    iex:24: (file)
+```
+
+```shell
+iex(24)> case File.read("./o12o0_hello.bin") do
+...(24)>   {:ok, body} -> # do something with the `body`
+...(24)>   {:error, reason} -> # handle the error caused by `reason`
+...(24)> end
+** (SyntaxError) iex:26:20: syntax error before: '->'
+    |
+ 26 |   {:error, reason} -> # handle the error caused by `reason`
+    |                    ^
+    (iex 1.14.3) lib/iex/evaluator.ex:292: IEx.Evaluator.parse_eval_inspect/3
+    (iex 1.14.3) lib/iex/evaluator.ex:187: IEx.Evaluator.loop/1
+    (iex 1.14.3) lib/iex/evaluator.ex:32: IEx.Evaluator.init/4
+    (stdlib 4.0.1) proc_lib.erl:240: :proc_lib.init_p_do_apply/3
+```
+
+## The `Path` module
+
+```shell
+iex(24)> Path.join("foo", "bar")
+"foo/bar"
+iex(25)> Path.expand("~/hello")
+"c:/Users/繧縺壹〒繧・hello"
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　マルチバイト文字列に対応してねーっ」  
+
+## Processes
+
+```shell
+iex(26)> {:ok, file} = File.open("./o12o0_hello.bin", [:write])
+{:ok, #PID<0.147.0>}
+```
+
+```shell
+iex(27)> File.close(file)
+:ok
+iex(28)> IO.write(file, "is anybody out there")
+** (ErlangError) Erlang error: :terminated:
+
+  * 1st argument: the device has terminated
+
+    (stdlib 4.0.1) io.erl:94: :io.put_chars(#PID<0.147.0>, "is anybody out there")
+    iex:28: (file)
+```
+
+```shell
+iex(28)> pid = spawn(fn ->
+...(28)>  receive do: (msg -> IO.inspect msg)
+...(28)> end)
+#PID<0.153.0>
+iex(29)> IO.write(pid, "hello")
+{:io_request, #PID<0.110.0>, #Reference<0.1783983275.2588672004.19160>,
+ {:put_chars, :unicode, "hello"}}
+** (ErlangError) Erlang error: :terminated:
+
+  * 1st argument: the device has terminated
+
+    (stdlib 4.0.1) io.erl:94: :io.put_chars(#PID<0.153.0>, "hello")
+    iex:29: (file)
+```
+
+## `iodata` and `chardata`
+
+```shell
+iex(29)> name = "Mary"
+"Mary"
+iex(30)> IO.puts("Hello " <> name <> "!")
+Hello Mary!
+:ok
+```
+
+```shell
+iex(31)> name = "Mary"
+"Mary"
+iex(32)> IO.puts(["Hello ", name, "!"])
+Hello Mary!
+:ok
+```
+
+```shell
+iex(33)> Enum.join(["apple", "banana", "lemon"], ",")
+"apple,banana,lemon"
+```
+
+```shell
+iex(34)> Enum.intersperse(["apple", "banana", "lemon"], ",")
+["apple", ",", "banana", ",", "lemon"]
+```
+
+```shell
+iex(35)> IO.puts(["apple", [",", "banana", [",", "lemon"]]])
+apple,banana,lemon
+:ok
+```
+
+```shell
+iex(36)> IO.puts(["apple", ?,, "banana", ?,, "lemon"])
+apple,banana,lemon
+:ok
+```
+
+```shell
+iex(37)> IO.puts([?O, ?l, ?á, ?\s, "Mary", ?!])
+Ola Mary!
+:ok
+```
+
+```shell
+# 非推奨な構文
+iex(38)> ~c"hello"
+'hello'
+```
+
+```shell
+iex(39)> [?a, ?b, ?c]
+'abc'
+```
+
+# 13. alias, require, and import
+
+📅 2023-04-03 mon 19:59
+
+例:  
+
+```shell
+# Alias the module so it can be called as Bar instead of Foo.Bar
+alias Foo.Bar, as: Bar
+
+# Require the module in order to use its macros
+require Foo
+
+# Import functions from Foo so they can be called without the `Foo.` prefix
+import Foo
+
+# Invokes the custom code defined in Foo as an extension point
+use Foo
+```
+
+## `alias`
+
+📄 `o13o0_stats.ex` ファイル新規作成  
+
+```elixir
+defmodule Stats do
+  alias Math.List, as: List
+  # In the remaining module definition List expands to Math.List.
+end
+```
+
+Command line:  
+
+```shell
+elixir o13o0_stats.ex  
+```
+
+📄 `o13o0_math.ex` ファイル新規作成
+
+```elixir
+defmodule Math do
+  def plus(a, b) do
+    alias Math.List
+    # ...
+  end
+
+  def minus(a, b) do
+    # ...
+  end
+end
+```
+
+```shell
+elixir o13o0_math.ex
+warning: variable "a" is unused (if the variable is not meant to be used, prefix it with an underscore)
+  o13o0_math.ex:2: Math.plus/2
+
+warning: variable "b" is unused (if the variable is not meant to be used, prefix it with an underscore)
+  o13o0_math.ex:2: Math.plus/2
+
+warning: variable "a" is unused (if the variable is not meant to be used, prefix it with an underscore)       
+  o13o0_math.ex:7: Math.minus/2
+
+warning: variable "b" is unused (if the variable is not meant to be used, prefix it with an underscore)       
+  o13o0_math.ex:7: Math.minus/2
+
+warning: unused alias List
+  o13o0_math.ex:3
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　分かんねーっ」  
+
+## `require`
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>iex
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> Integer.is_odd(3)
+** (UndefinedFunctionError) function Integer.is_odd/1 is undefined or private. However there is a macro with the same name and arity. Be sure to require Integer if you intend to invoke this macro
+    (elixir 1.14.3) Integer.is_odd(3)
+    iex:1: (file)
+iex(1)> require Integer
+Integer
+iex(2)> Integer.is_odd(3)
+true
+```
+
+## `import`
+
+```shell
+iex(3)> import List, only: [duplicate: 2]
+List
+iex(4)> duplicate(:ok, 3)
+[:ok, :ok, :ok]
+```
+
+📄 `o13o1o0_math.ex` ファイル新規作成
+
+```elixir
+defmodule Math do
+  def some_function do
+    import List, only: [duplicate: 2]
+    duplicate(:ok, 10)
+  end
+end
+```
+
+Command line:  
+
+```shell
+elixir o13o1o0_math.ex
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　例は無いのか……」  
+
+## `use`
+
+📄 `o13o5o0_assertion_test.ex` ファイル新規作成  
+
+```elixir
+defmodule AssertionTest do
+  use ExUnit.Case, async: true
+
+  test "always pass" do
+    assert true
+  end
+end
+```
+
+Command line:  
+
+```shell
+elixir o13o5o0_assertion_test.ex
+** (RuntimeError) cannot use ExUnit.Case without starting the ExUnit application, please call ExUnit.start() or explicitly start the :ex_unit app
+    lib/ex_unit/case.ex:505: ExUnit.Case.__after_compile__/2
+    (stdlib 4.0.1) lists.erl:1350: :lists.foldl/3
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　分かんねーっ」  
+
+一般的に言えば、以下のモジュールは:  
+
+```elixir
+defmodule Example do
+  use Feature, option: :value
+end
+```
+
+以下のモジュールにコンパイルされる:  
+
+```elixir
+defmodule Example do
+  require Feature
+  Feature.__using__(option: :value)
+end
+```
+
+## Understanding Aliases
+
+```shell
+iex(1)> is_atom(String)
+true
+iex(2)> to_string(String)
+"Elixir.String"
+iex(3)> :"Elixir.String" == String
+true
+```
+
+```shell
+iex(4)> List.flatten([1, [2], 3])
+[1, 2, 3]
+iex(5)> :"Elixir.List".flatten([1, [2], 3])
+[1, 2, 3]
+```
+
+```shell
+iex(6)> :lists.flatten([1, [2], 3])
+[1, 2, 3]
+```
+
+## Module nesting
+
+📄 `o13o6o0_module_nesting.ex` ファイル新規作成  
+
+```elixir
+defmodule Foo do
+  defmodule Bar do
+  end
+end
+```
+
+Command line:  
+
+```shell
+elixir o13o6o0_module_nesting.ex
+```
+
+📄 `o13o6o1o0_test.ex` ファイル新規作成  
+
+```elixir
+defmodule Foo.Bar do
+end
+
+defmodule Foo do
+  alias Foo.Bar
+  # Can still access it as `Bar`
+end
+```
+
+Command line:  
+
+```shell
+elixir o13o6o1o0_test.ex
+warning: unused alias Bar
+  o13o6o1o0_test.ex:5
+```
+
+📄 `o13o6o2o0_test.exs` ファイル新規作成  
+
+```elixir
+defmodule Foo do
+  defmodule Bar do
+    defmodule Baz do
+    end
+  end
+end
+
+alias Foo.Bar.Baz
+# The module `Foo.Bar.Baz` is now available as `Baz`
+# However, the module `Foo.Bar` is *not* available as `Bar`
+```
+
+Command line:  
+
+```shell
+elixir o13o6o2o0_test.exs
+warning: unused alias Baz
+  o13o6o2o0_test.exs:8
+```
+
+## Multi alias/import/require/use
+
+```shell
+iex(1)> alias MyApp.{Foo, Bar, Baz}
+[MyApp.Foo, MyApp.Bar, MyApp.Baz]
+```
+
+# 14. Module attributes
+
+📅 2023-04-03 mon 20:47  
