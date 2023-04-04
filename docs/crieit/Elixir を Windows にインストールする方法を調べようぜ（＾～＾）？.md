@@ -3320,3 +3320,218 @@ C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o16o6o0_user_defm
 特になし  
 
 ## Deriving
+
+📄 `o16o7o0_size_for_any.ex` ファイル新規作成  
+
+```elixir
+defimpl Size, for: Any do
+  def size(_), do: 0
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o16o7o0_size_for_any.ex
+```
+
+📄 `o16o8o0_other_user_defmodule.ex` ファイル新規作成  
+
+```elixir
+defmodule OtherUser do
+  @derive [Size]
+  defstruct [:name, :age]
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o16o8o0_other_user_defmodule.ex
+```
+
+## Fallback to `Any`
+
+📄 `o16o9o0_size_defprotocol.ex` ファイル新規作成  
+
+```elixir
+defprotocol Size do
+  @fallback_to_any true
+  def size(data)
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o16o9o0_size_defprotocol.ex
+warning: redefining module Size (current version loaded from Elixir.Size.beam)
+  o16o9o0_size_defprotocol.ex:1
+```
+
+📄 `o16oa10o0_size_for_any_do_zero.ex` ファイル新規作成  
+
+```elixir
+defimpl Size, for: Any do
+  def size(_), do: 0
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o16oa10o0_size_for_any_do_zero.ex
+warning: redefining module Size.Any (current version loaded from Elixir.Size.Any.beam)
+  o16oa10o0_size_for_any_do_zero.ex:1
+```
+
+## Built-in protocols
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>iex
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> Enum.map([1, 2, 3], fn x -> x * 2 end)
+[2, 4, 6]
+iex(2)> Enum.reduce(1..3, 0, fn x, acc -> x + acc end)
+6
+```
+
+```shell
+iex(3)> to_string :hello
+"hello"
+```
+
+```shell
+iex(4)> "age: #{25}"
+"age: 25"
+```
+
+```shell
+iex(5)> tuple = {1, 2, 3}
+{1, 2, 3}
+iex(6)> "tuple: #{tuple}"
+** (Protocol.UndefinedError) protocol String.Chars not implemented for {1, 2, 3} of type Tuple
+    (elixir 1.14.3) lib/string/chars.ex:3: String.Chars.impl_for!/1
+    (elixir 1.14.3) lib/string/chars.ex:22: String.Chars.to_string/1
+    iex:6: (file)
+```
+
+```shell
+iex(6)> "tuple: #{inspect tuple}"
+"tuple: {1, 2, 3}"
+```
+
+```shell
+iex(7)> {1, 2, 3}
+{1, 2, 3}
+iex(8)> %User{}
+%User{name: nil, age: nil}
+```
+
+```shell
+iex(9)> inspect &(&1+2)
+"#Function<42.3316493/1 in :erl_eval.expr/6>"
+```
+
+# 17. Comprehensions
+
+📅 2023-04-04 tue 22:58  
+
+📖 [17. Comprehensions](https://elixir-lang.org/getting-started/comprehensions.html)  
+
+```shell
+iex(10)> for n <- [1, 2, 3, 4], do: n * n
+[1, 4, 9, 16]
+```
+
+## Generators and filters
+
+```shell
+iex(11)> for n <- 1..4, do: n * n
+[1, 4, 9, 16]
+```
+
+```shell
+iex(12)> values = [good: 1, good: 2, bad: 3, good: 4]
+[good: 1, good: 2, bad: 3, good: 4]
+iex(13)> for {:good, n} <- values, do: n * n
+[1, 4, 16]
+```
+
+```shell
+iex(14)> for n <- 0..5, rem(n, 3) == 0, do: n * n
+[0, 9]
+```
+
+📄 `o17o1o0_file_size.exs` ファイル新規作成  
+
+```elixir
+# 改造した
+dirs = ['./', './docs']
+
+for dir <- dirs,
+    file <- File.ls!(dir),
+    path = Path.join(dir, file),
+    File.regular?(path) do
+  IO.puts(File.stat!(path).size)
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixir o17o1o0_file_size.exs
+104
+188
+381
+# 以下略
+```
+
+```shell
+iex(1)> for i <- [:a, :b, :c], j <- [1, 2], do:  {i, j}
+[a: 1, a: 2, b: 1, b: 2, c: 1, c: 2]
+```
+
+## Bitstring generators
+
+```shell
+iex(2)> pixels = <<213, 45, 132, 64, 76, 32, 76, 0, 0, 234, 32, 15>>
+<<213, 45, 132, 64, 76, 32, 76, 0, 0, 234, 32, 15>>
+iex(3)> for <<r::8, g::8, b::8 <- pixels>>, do: {r, g, b}
+[{213, 45, 132}, {64, 76, 32}, {76, 0, 0}, {234, 32, 15}]
+```
+
+## The `:into` option
+
+```shell
+iex(4)> for <<c <- " hello world ">>, c != ?\s, into: "", do: <<c>>
+"helloworld"
+```
+
+```shell
+iex(5)> for {key, val} <- %{"a" => 1, "b" => 2}, into: %{}, do: {key, val * val}
+%{"a" => 1, "b" => 4}
+```
+
+```shell
+iex(6)> stream = IO.stream(:stdio, :line)
+%IO.Stream{device: :standard_io, raw: false, line_or_bytes: :line}
+iex(7)> for line <- stream, into: stream do
+...(7)>   String.upcase(line) <> "\n"
+...(7)> end
+banana
+BANANA
+```
+
+## Other options
+
+省略  
+
+# 18. Sigils
+
+📅 2023-04-04 tue 23:18  
+
+📖 [18. Sigils](https://elixir-lang.org/getting-started/sigils.html)  
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　**シジル** （Sigils）は、文字列操作か何かだろうか？」  
