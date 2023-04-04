@@ -3534,4 +3534,201 @@ BANANA
 📖 [18. Sigils](https://elixir-lang.org/getting-started/sigils.html)  
 
 ![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
-「　👆　**シジル** （Sigils）は、文字列操作か何かだろうか？」  
+「　👆　**シジル** （Sigils）は、文字列操作か何かだろうか？」
+
+## Regular expressions
+
+```shell
+iex(1)> regex = ~r/foo|bar/
+~r/foo|bar/
+iex(2)> "foo" =~ regex
+true
+iex(3)> "bat" =~ regex
+false
+```
+
+```shell
+iex(4)> "HELLO" =~ ~r/hello/
+false
+iex(5)> "HELLO" =~ ~r/hello/i
+true
+```
+
+## Strings, char lists, and word lists sigils
+
+### Strings
+
+```shell
+iex(6)> ~s(this is a string with "double" quotes, not 'single' ones)
+"this is a string with \"double\" quotes, not 'single' ones"
+```
+
+### Char lists
+
+```shell
+iex(7)> ~c(this is a char list containing 'single quotes')
+'this is a char list containing \'single quotes\''
+```
+
+### Word lists
+
+```shell
+iex(8)> ~w(foo bar bat)
+["foo", "bar", "bat"]
+```
+
+```shell
+iex(9)> ~w(foo bar bat)a
+[:foo, :bar, :bat]
+```
+
+## Interpolation and escaping in string sigils
+
+```shell
+iex(10)> ~s(String with escape codes \x26 #{"inter" <> "polation"})
+"String with escape codes & interpolation"
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　**インターポレーション** （補間）だ」  
+
+```shell
+iex(11)> ~S(String without escape codes \x26 without #{interpolation})
+"String without escape codes \\x26 without \#{interpolation}"
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　**エスケープ** だ」  
+
+```shell
+iex(12)> ~s"""
+...(12)> this is
+...(12)> a heredoc string
+...(12)> """
+"this is\na heredoc string\n"
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　**ヒア・ドキュメント** だ」  
+
+例１:  
+
+```elixir
+@doc """
+Converts double-quotes to single-quotes.
+
+## Examples
+
+    iex> convert("\\\"foo\\\"")
+    "'foo'"
+
+"""
+def convert(...)
+```
+
+例２:  
+
+```elixir
+@doc ~S"""
+Converts double-quotes to single-quotes.
+
+## Examples
+
+    iex> convert("\"foo\"")
+    "'foo'"
+
+"""
+def convert(...)
+```
+
+## Calendar sigils
+
+### Date
+
+```shell
+iex(13)> d = ~D[2019-10-31]
+~D[2019-10-31]
+iex(14)> d.day
+31
+```
+
+### Time
+
+```shell
+iex(15)> t = ~T[23:00:07.0]
+~T[23:00:07.0]
+iex(16)> t.second
+7
+```
+
+### NaiveDateTime
+
+```shell
+iex(17)> ndt = ~N[2019-10-31 23:00:07]
+~N[2019-10-31 23:00:07]
+```
+
+### UTC DateTime
+
+```shell
+iex(18)> dt = ~U[2019-10-31 19:59:03Z]
+~U[2019-10-31 19:59:03Z]
+iex(19)> %DateTime{minute: minute, time_zone: time_zone} = dt
+~U[2019-10-31 19:59:03Z]
+iex(20)> minute
+59
+iex(21)> time_zone
+"Etc/UTC"
+```
+
+## Custom sigils
+
+```shell
+iex(22)> sigil_r(<<"foo">>, 'i')
+~r/foo/i
+iex(23)> h sigil_r
+
+                       defmacro sigil_r(term, modifiers)
+
+Handles the sigil `~r` for regular expressions.
+
+It returns a regular expression pattern, unescaping characters and replacing
+interpolations.
+
+More information on regular expressions can be found in the `Regex` module.
+
+## Examples
+
+    iex> Regex.match?(~r/foo/, "foo")
+    true
+
+    iex> Regex.match?(~r/a#{:b}c/, "abc")
+    true
+
+While the `~r` sigil allows parens and brackets to be used as delimiters, it is
+preferred to use `"` or `/` to avoid escaping conflicts with reserved regex
+characters.
+```
+
+```shell
+iex(24)> defmodule MySigils do
+...(24)>   def sigil_i(string, []), do: String.to_integer(string)
+...(24)>   def sigil_i(string, [?n]), do: -String.to_integer(string)
+...(24)> end
+{:module, MySigils,
+ <<70, 79, 82, 49, 0, 0, 6, 68, 66, 69, 65, 77, 65, 116, 85, 56, 0, 0, 0, 194,
+   0, 0, 0, 19, 15, 69, 108, 105, 120, 105, 114, 46, 77, 121, 83, 105, 103, 105,
+   108, 115, 8, 95, 95, 105, 110, 102, 111, ...>>, {:sigil_i, 2}}
+iex(25)> import MySigils
+MySigils
+iex(26)> ~i(13)
+13
+iex(27)> ~i(42)n
+-42
+```
+
+# 19. try, catch, and rescue
+
+📅 2023-04-04 tue 23:38  
+
+📖 [19. try, catch, and rescue](https://elixir-lang.org/getting-started/try-catch-and-rescue.html)  
