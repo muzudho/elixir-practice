@@ -2986,3 +2986,337 @@ end
 
 # 15. Structs
 
+📅 2023-04-04 tue 19:19  
+
+📖 [構造体](https://elixir-lang.org/getting-started/structs.html)  
+
+map:  
+
+```shell
+iex(1)> map = %{a: 1, b: 2}
+%{a: 1, b: 2}
+iex(2)> map[:a]
+1
+iex(3)> %{map | a: 3}
+%{a: 3, b: 2}
+```
+
+## Defining structs
+
+```shell
+iex(4)> defmodule User do
+...(4)> defstruct name: "John", age: 27
+...(4)> end
+{:module, User,
+ <<70, 79, 82, 49, 0, 0, 8, 40, 66, 69, 65, 77, 65, 116, 85, 56, 0, 0, 0, 247,
+   0, 0, 0, 22, 11, 69, 108, 105, 120, 105, 114, 46, 85, 115, 101, 114, 8, 95,
+   95, 105, 110, 102, 111, 95, 95, 10, 97, ...>>, %User{name: "John", age: 27}}
+```
+
+```shell
+iex(5)> %User{}
+%User{name: "John", age: 27}
+iex(6)> %User{name: "Jane"}
+%User{name: "Jane", age: 27}
+```
+
+```shell
+iex(7)> %User{oops: :field}
+** (KeyError) key :oops not found
+    expanding struct: User.__struct__/1
+    iex:7: (file)
+```
+
+## Accessing and updating structs
+
+```shell
+iex(7)> john = %User{}
+%User{name: "John", age: 27}
+iex(8)> john.name
+"John"
+iex(9)> jane = %{john | name: "Jane"}
+%User{name: "Jane", age: 27}
+iex(10)> %{jane | oops: :field}
+** (KeyError) key :oops not found in: %User{name: "Jane", age: 27}
+    (stdlib 4.0.1) :maps.update(:oops, :field, %User{name: "Jane", age: 27})
+    (stdlib 4.0.1) erl_eval.erl:309: anonymous fn/2 in :erl_eval.expr/6
+    (stdlib 4.0.1) lists.erl:1350: :lists.foldl/3
+    (stdlib 4.0.1) erl_eval.erl:306: :erl_eval.expr/6
+    (elixir 1.14.3) src/elixir.erl:294: :elixir.eval_forms/4
+    (elixir 1.14.3) lib/module/parallel_checker.ex:110: Module.ParallelChecker.verify/1
+    (iex 1.14.3) lib/iex/evaluator.ex:329: IEx.Evaluator.eval_and_inspect/3
+    (iex 1.14.3) lib/iex/evaluator.ex:303: IEx.Evaluator.eval_and_inspect_parsed/3
+```
+
+```shell
+iex(10)> %User{name: name} = john
+%User{name: "John", age: 27}
+iex(11)> name
+"John"
+iex(12)> %User{} = %{}
+** (MatchError) no match of right hand side value: %{}
+    (stdlib 4.0.1) erl_eval.erl:496: :erl_eval.expr/6
+    iex:12: (file)
+```
+
+## Structs are bare maps underneath
+
+```shell
+iex(12)> is_map(john)
+true
+iex(13)> john.__struct__
+User
+```
+
+```shell
+iex(14)> john = %User{}
+%User{name: "John", age: 27}
+iex(15)> john[:name]
+** (UndefinedFunctionError) function User.fetch/2 is undefined (User does not implement the Access behaviour. 
+If you are using get_in/put_in/update_in, you can specify the field to be accessed using Access.key!/1)       
+    User.fetch(%User{name: "John", age: 27}, :name)
+    (elixir 1.14.3) lib/access.ex:288: Access.get/3
+    iex:15: (file)
+```
+
+```shell
+iex(15)> jane = Map.put(%User{}, :name, "Jane")
+%User{name: "Jane", age: 27}
+iex(16)> Map.merge(jane, %User{name: "John"})
+%User{name: "John", age: 27}
+iex(17)> Map.keys(jane)
+[:__struct__, :age, :name]
+```
+
+## Default values and required keys
+
+```shell
+iex(18)> defmodule Product do
+...(18)>   defstruct [:name]
+...(18)> end
+{:module, Product,
+ <<70, 79, 82, 49, 0, 0, 8, 24, 66, 69, 65, 77, 65, 116, 85, 56, 0, 0, 0, 250,
+   0, 0, 0, 22, 14, 69, 108, 105, 120, 105, 114, 46, 80, 114, 111, 100, 117, 99,
+   116, 8, 95, 95, 105, 110, 102, 111, 95, ...>>, %Product{name: nil}}
+```
+
+```shell
+iex(19)> defmodule User do
+...(19)>   defstruct [:email, name: "John", age: 27]
+...(19)> end
+warning: redefining module User (current version defined in memory)
+  iex:19
+
+{:module, User,
+ <<70, 79, 82, 49, 0, 0, 8, 76, 66, 69, 65, 77, 65, 116, 85, 56, 0, 0, 0, 247,
+   0, 0, 0, 22, 11, 69, 108, 105, 120, 105, 114, 46, 85, 115, 101, 114, 8, 95,
+   95, 105, 110, 102, 111, 95, 95, 10, 97, ...>>,
+ %User{email: nil, name: "John", age: 27}}
+iex(20)> %User{}
+%User{email: nil, name: "John", age: 27}
+```
+
+```shell
+iex(21)> defmodule User do
+...(21)>   defstruct [name: "John", age: 27, :email]
+...(21)> end
+** (SyntaxError) iex:22:35: unexpected expression after keyword list. Keyword lists must always come last in lists and maps. Therefore, this is not allowed:
+
+    [some: :value, :another]
+    %{some: :value, another => value}
+
+Instead, reorder it to be the last entry:
+
+    [:another, some: :value]
+    %{another => value, some: :value}
+
+Syntax error after: ','
+    |
+ 22 |   defstruct [name: "John", age: 27, :email]
+    |                                   ^
+    (iex 1.14.3) lib/iex/evaluator.ex:292: IEx.Evaluator.parse_eval_inspect/3
+    (iex 1.14.3) lib/iex/evaluator.ex:187: IEx.Evaluator.loop/1
+    (iex 1.14.3) lib/iex/evaluator.ex:32: IEx.Evaluator.init/4
+    (stdlib 4.0.1) proc_lib.erl:240: :proc_lib.init_p_do_apply/3
+```
+
+```shell
+iex(21)> defmodule Car do
+...(21)>   @enforce_keys [:make]
+...(21)>   defstruct [:model, :make]
+...(21)> end
+{:module, Car,
+ <<70, 79, 82, 49, 0, 0, 10, 184, 66, 69, 65, 77, 65, 116, 85, 56, 0, 0, 1, 80,
+   0, 0, 0, 31, 10, 69, 108, 105, 120, 105, 114, 46, 67, 97, 114, 8, 95, 95,
+   105, 110, 102, 111, 95, 95, 10, 97, 116, ...>>, %Car{model: nil, make: nil}}
+iex(22)> %Car{}
+** (ArgumentError) the following keys must also be given when building struct Car: [:make]
+    expanding struct: Car.__struct__/1
+    iex:22: (file)
+```
+
+# 16. Protocols
+
+📅 2023-04-04 tue 19:32  
+
+📖 [プロトコルズ](https://elixir-lang.org/getting-started/protocols.html)  
+
+📄 `o16o1o0_type.ex` ファイル新規作成  
+
+```elixir
+defmodule Utility do
+  def type(value) when is_binary(value), do: "string"
+  def type(value) when is_integer(value), do: "integer"
+  # ... other implementations ...
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o16o1o0_type.ex
+```
+
+📄 `o16o2o0_protocol.ex` ファイル新規作成  
+
+```elixir
+defprotocol Utility do
+  @spec type(t) :: String.t()
+  def type(value)
+end
+
+defimpl Utility, for: BitString do
+  def type(_value), do: "string"
+end
+
+defimpl Utility, for: Integer do
+  def type(_value), do: "integer"
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o16o2o0_protocol.ex
+warning: redefining module Utility (current version loaded from Elixir.Utility.beam)
+  o16o2o0_protocol.ex:1
+```
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>iex
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> Utility.type("foo")
+"string"
+iex(2)> Utility.type(123)
+"integer"
+```
+
+## Example
+
+📄 `o16o3o0_size_protocol.ex` ファイル新規作成  
+
+```elixir
+defprotocol Size do
+  @doc "Calculates the size (and not the length!) of a data structure"
+  def size(data)
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o16o3o0_size_protocol.ex
+```
+
+📄 `o16o4o0_size_defimpl.ex` ファイル新規作成  
+
+```elixir
+defimpl Size, for: BitString do
+  def size(string), do: byte_size(string)
+end
+
+defimpl Size, for: Map do
+  def size(map), do: map_size(map)
+end
+
+defimpl Size, for: Tuple do
+  def size(tuple), do: tuple_size(tuple)
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o16o4o0_size_defimpl.ex
+```
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>iex
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> Size.size("foo")
+3
+iex(2)> Size.size({:ok, "hello"})
+2
+iex(3)> Size.size(%{label: "some label"})
+1
+```
+
+```shell
+iex(4)> Size.size([1, 2, 3])
+** (Protocol.UndefinedError) protocol Size not implemented for [1, 2, 3] of type List
+    o16o3o0_size_protocol.ex:1: Size.impl_for!/1
+    o16o3o0_size_protocol.ex:3: Size.size/1
+    iex:4: (file)
+```
+
+## Protocols and structs
+
+```shell
+iex(4)> Size.size(%{})
+0
+iex(5)> set = %MapSet{} = MapSet.new
+MapSet.new([])
+iex(6)> Size.size(set)
+** (Protocol.UndefinedError) protocol Size not implemented for MapSet.new([]) of type MapSet (a struct)
+    o16o3o0_size_protocol.ex:1: Size.impl_for!/1
+    o16o3o0_size_protocol.ex:3: Size.size/1
+    iex:6: (file)
+```
+
+📄 `o16o5o0_size_for_map_set_defimple.ex` ファイル新規作成  
+
+```elixir
+defimpl Size, for: MapSet do
+  def size(set), do: MapSet.size(set)
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o16o5o0_size_for_map_set_defimple.ex
+```
+
+📄 `o16o6o0_user_defmodule.ex` ファイル新規作成  
+
+```elixir
+defmodule User do
+  defstruct [:name, :age]
+end
+
+defimpl Size, for: User do
+  def size(_user), do: 2
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o16o6o0_user_defmodule.ex
+```
+
+## Implementing `Any`
+
+特になし  
+
+## Deriving
