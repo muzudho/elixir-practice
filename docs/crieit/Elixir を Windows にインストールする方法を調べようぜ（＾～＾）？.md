@@ -3727,8 +3727,269 @@ iex(27)> ~i(42)n
 -42
 ```
 
-# 19. try, catch, and rescue
-
 📅 2023-04-04 tue 23:38  
 
+# 19. try, catch, and rescue
+
+📅 2023-04-05 tue 19:16  
+
 📖 [19. try, catch, and rescue](https://elixir-lang.org/getting-started/try-catch-and-rescue.html)  
+
+## Errors
+
+```shell
+iex(1)> :foo + 1
+** (ArithmeticError) bad argument in arithmetic expression: :foo + 1
+    :erlang.+(:foo, 1)
+    iex:1: (file)
+```
+
+```shell
+iex(1)> raise "oops"
+** (RuntimeError) oops
+    iex:1: (file)
+```
+
+```shell
+iex(1)> raise ArgumentError, message: "invalid argument foo"
+** (ArgumentError) invalid argument foo
+    iex:1: (file)
+```
+
+```shell
+iex(1)> defmodule MyError do
+...(1)>   defexception message: "default message"
+...(1)> end
+{:module, MyError,
+ <<70, 79, 82, 49, 0, 0, 15, 16, 66, 69, 65, 77, 65, 116, 85, 56, 0, 0, 1, 163,
+   0, 0, 0, 40, 14, 69, 108, 105, 120, 105, 114, 46, 77, 121, 69, 114, 114, 111,
+   114, 8, 95, 95, 105, 110, 102, 111, 95, ...>>, :ok}
+iex(2)> raise MyError
+** (MyError) default message
+    iex:2: (file)
+iex(2)> raise MyError, message: "custom message"
+** (MyError) custom message
+    iex:2: (file)
+```
+
+```shell
+iex(2)> try do
+...(2)>   raise "oops"
+...(2)> rescue
+...(2)>   e in RuntimeError -> e
+...(2)> end
+%RuntimeError{message: "oops"}
+```
+
+```shell
+iex(3)> try do
+...(3)>   raise "oops"
+...(3)> rescue
+...(3)>   RuntimeError -> "Error!"
+...(3)> end
+"Error!"
+```
+
+📄 `hello.txt` ファイル新規作成  
+
+```plaintext
+hello world
+```
+
+iex:  
+
+```shell
+iex(4)> case File.read("hello.txt") do
+...(4)>   {:ok, body} -> IO.puts("Success: #{body}")
+...(4)>   {:error, reason} -> IO.puts("Error: #{reason}")
+...(4)> end
+Success: hello world
+
+:ok
+```
+
+```shell
+iex(5)> File.read!("unknown")
+** (File.Error) could not read file "unknown": no such file or directory
+    (elixir 1.14.3) lib/file.ex:358: File.read!/1
+    iex:5: (file)
+```
+
+## Fail fast / Let it crash
+
+省略  
+
+## Reraise
+
+例:  
+
+```elixir
+try do
+  ... some code ...
+rescue
+  e ->
+    Logger.error(Exception.format(:error, e, __STACKTRACE__))
+    reraise e, __STACKTRACE__
+end
+```
+
+## Throws
+
+```shell
+iex(5)> try do
+...(5)>   Enum.each(-50..50, fn x ->
+...(5)>     if rem(x, 13) == 0, do: throw(x)
+...(5)>   end)
+...(5)>   "Got nothing"
+...(5)> catch
+...(5)>   x -> "Got #{x}"
+...(5)> end
+"Got -39"
+```
+
+```shell
+iex(6)> Enum.find(-50..50, &(rem(&1, 13) == 0))
+-39
+```
+
+## Exits
+
+```shell
+iex(7)> spawn_link(fn -> exit(1) end)
+** (EXIT from #PID<0.105.0>) shell process exited with reason: 1
+
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+```
+
+```shell
+iex(1)> try do
+...(1)>   exit("I am exiting")
+...(1)> catch
+...(1)>   :exit, _ -> "not really"
+...(1)> end
+"not really"
+```
+
+## After
+
+```shell
+iex(2)> {:ok, file} = File.open("sample", [:utf8, :write])
+{:ok, #PID<0.152.0>}
+iex(3)> try do
+...(3)>   IO.write(file, "olá")
+...(3)>   raise "oops, something went wrong"
+...(3)> after
+...(3)>   File.close(file)
+...(3)> end
+** (RuntimeError) oops, something went wrong
+    iex:5: (file)
+```
+
+```shell
+iex(3)> defmodule RunAfter do
+...(3)>   def without_even_trying do
+...(3)>     raise "oops"
+...(3)>   after
+...(3)>     IO.puts "cleaning up!"
+...(3)>   end
+...(3)> end
+{:module, RunAfter,
+ <<70, 79, 82, 49, 0, 0, 7, 56, 66, 69, 65, 77, 65, 116, 85, 56, 0, 0, 0, 242,
+   0, 0, 0, 23, 15, 69, 108, 105, 120, 105, 114, 46, 82, 117, 110, 65, 102, 116,
+   101, 114, 8, 95, 95, 105, 110, 102, 111, ...>>, {:without_even_trying, 0}}
+iex(4)> RunAfter.without_even_trying
+cleaning up!
+** (RuntimeError) oops
+    iex:5: RunAfter.without_even_trying/0
+    iex:4: (file)
+```
+
+## Else
+
+```shell
+iex(4)> x = 2
+2
+iex(5)> try do
+...(5)>   1 / x
+...(5)> rescue
+...(5)>   ArithmeticError ->
+...(5)>     :infinity
+...(5)> else
+...(5)>   y when y < 1 and y > -1 ->
+...(5)>     :small
+...(5)>   _ ->
+...(5)>     :large
+...(5)> end
+:small
+```
+
+## Variables scope
+
+```shell
+iex(6)> try do
+...(6)>   raise "fail"
+...(6)>   what_happened = :did_not_raise
+...(6)> rescue
+...(6)>   _ -> what_happened = :rescued
+...(6)> end
+warning: variable "what_happened" is unused (if the variable is not meant to be used, prefix it with an underscore)
+  iex:8
+
+:rescued
+warning: variable "what_happened" is unused (if the variable is not meant to be used, prefix it with an underscore)      
+  iex:10
+
+iex(7)> what_happened
+warning: variable "what_happened" does not exist and is being expanded to "what_happened()", please use parentheses to remove the ambiguity or change the variable name
+  iex:7
+
+** (CompileError) iex:7: undefined function what_happened/0 (there is no such import)
+    (elixir 1.14.3) src/elixir.erl:376: :elixir.quoted_to_erl/4
+    (elixir 1.14.3) src/elixir.erl:277: :elixir.eval_forms/4
+    (elixir 1.14.3) lib/module/parallel_checker.ex:110: Module.ParallelChecker.verify/1
+    (iex 1.14.3) lib/iex/evaluator.ex:329: IEx.Evaluator.eval_and_inspect/3
+    (iex 1.14.3) lib/iex/evaluator.ex:303: IEx.Evaluator.eval_and_inspect_parsed/3
+    (iex 1.14.3) lib/iex/evaluator.ex:292: IEx.Evaluator.parse_eval_inspect/3
+    (iex 1.14.3) lib/iex/evaluator.ex:187: IEx.Evaluator.loop/1
+```
+
+```shell
+iex(7)> what_happened =
+...(7)>   try do
+...(7)>     raise "fail"
+...(7)>     :did_not_raise
+...(7)>   rescue
+...(7)>     _ -> :rescued
+...(7)> end
+:rescued
+iex(8)> what_happened
+:rescued
+```
+
+```shell
+iex(9)> try do
+...(9)>   raise "fail"
+...(9)>   another_what_happened = :did_not_raise
+...(9)> rescue
+...(9)>   _ -> another_what_happened
+...(9)> end
+warning: variable "another_what_happened" is unused (if the variable is not meant to be used, prefix it with an underscore)
+  iex:11
+
+** (CompileError) iex:13: undefined function another_what_happened/0 (there is no such import)
+    (elixir 1.14.3) src/elixir_clauses.erl:45: :elixir_clauses.clause/6
+    (elixir 1.14.3) src/elixir_clauses.erl:343: anonymous fn/7 in :elixir_clauses.expand_clauses_origin/6
+    (stdlib 4.0.1) lists.erl:1462: :lists.mapfoldl_1/3
+    (elixir 1.14.3) src/elixir_clauses.erl:347: :elixir_clauses.expand_clauses_origin/6
+    (elixir 1.14.3) src/elixir_clauses.erl:258: :elixir_clauses.expand_clauses_with_stacktrace/5
+    (stdlib 4.0.1) lists.erl:1462: :lists.mapfoldl_1/3
+    (stdlib 4.0.1) lists.erl:1463: :lists.mapfoldl_1/3
+warning: variable "another_what_happened" does not exist and is being expanded to "another_what_happened()", please use parentheses to remove the ambiguity or change the variable name
+  iex:13
+```
+
+# 20. Optional syntax sheet
+
+📅 2023-04-05 wed 20:09  
+
+📖 [20. Optional syntax sheet](https://elixir-lang.org/getting-started/optional-syntax.html)  
