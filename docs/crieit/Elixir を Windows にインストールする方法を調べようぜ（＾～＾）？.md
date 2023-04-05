@@ -4926,3 +4926,572 @@ mix help
 📅 2023-04-05 wed 22:38  
 
 📖 [2. Agent](https://elixir-lang.org/getting-started/mix-otp/agent.html)  
+
+## The trouble with state
+
+省略  
+
+## Agents
+
+Command line:  
+
+```shell
+iex -S mix
+```
+
+```shell
+iex(1)> {:ok, agent} = Agent.start_link fn -> [] end
+{:ok, #PID<0.149.0>}
+iex(2)> Agent.update(agent, fn list -> ["eggs" | list] end)
+:ok
+iex(3)> Agent.get(agent, fn list -> list end)
+["eggs"]
+iex(4)> Agent.stop(agent)
+:ok
+```
+
+```shell
+iex(5)> {:ok, agent} = Agent.start_link fn -> [] end
+{:ok, #PID<0.154.0>}
+iex(6)> Agent.update(agent, fn _list -> 123 end)
+:ok
+iex(7)> Agent.update(agent, fn content -> %{a: content} end)
+:ok
+iex(8)> Agent.update(agent, fn content -> [12 | [content]] end)
+:ok
+iex(9)> Agent.update(agent, fn list -> [:nop | list] end)
+:ok
+iex(10)> Agent.get(agent, fn content -> content end)
+[:nop, 12, %{a: 123}]
+```
+
+📄 `elixir-practice/projects/kv/test/kv/bucket_test.exs` ファイル新規作成  
+
+```elixir
+# 失敗するテストの例？
+defmodule KV.BucketTest do
+  use ExUnit.Case, async: true
+
+  test "stores values by key" do
+    {:ok, bucket} = KV.Bucket.start_link([])
+    assert KV.Bucket.get(bucket, "milk") == nil
+
+    KV.Bucket.put(bucket, "milk", 3)
+    assert KV.Bucket.get(bucket, "milk") == 3
+  end
+end
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　何をすればいいのか？」  
+
+例:  
+
+```plaintext
+** (UndefinedFunctionError) function KV.Bucket.start_link/1 is undefined (module KV.Bucket is not available)
+```
+
+📄 `elixir-practice/projects/kv/lib/kv/bucket.ex` ファイル新規作成
+
+```elixir
+defmodule KV.Bucket do
+  use Agent
+
+  @doc """
+  Starts a new bucket.
+  """
+  def start_link(_opts) do
+    Agent.start_link(fn -> %{} end)
+  end
+
+  @doc """
+  Gets a value from the `bucket` by `key`.
+  """
+  def get(bucket, key) do
+    Agent.get(bucket, &Map.get(&1, key))
+  end
+
+  @doc """
+  Puts the `value` for the given `key` in the `bucket`.
+  """
+  def put(bucket, key, value) do
+    Agent.update(bucket, &Map.put(&1, key, value))
+  end
+end
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　何をすればいいのか？」  
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>elixirc ./lib/kv/bucket.ex
+```
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>mix test
+Compiling 1 file (.ex)
+warning: redefining module KV.Bucket (current version loaded from Elixir.KV.Bucket.beam)
+  lib/kv/bucket.ex:1
+
+Generated kv app
+...
+Finished in 0.02 seconds (0.02s async, 0.00s sync)
+1 doctest, 2 tests, 0 failures
+
+Randomized with seed 758642
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　これで合ってるのかどうか分からん」  
+
+## Test setup with ExUnit callbacks
+
+📄 `elixir-practice/projects/kv/test/kv/bucket_test.exs` ファイル上書き  
+
+```elixir
+defmodule KV.BucketTest do
+  use ExUnit.Case, async: true
+
+  # 失敗するテストの例？
+  # test "stores values by key" do
+  #   {:ok, bucket} = KV.Bucket.start_link([])
+  #   assert KV.Bucket.get(bucket, "milk") == nil
+  #
+  #   KV.Bucket.put(bucket, "milk", 3)
+  #   assert KV.Bucket.get(bucket, "milk") == 3
+  # end
+
+  setup do
+    {:ok, bucket} = KV.Bucket.start_link([])
+    %{bucket: bucket}
+  end
+
+  test "stores values by key", %{bucket: bucket} do
+    assert KV.Bucket.get(bucket, "milk") == nil
+
+    KV.Bucket.put(bucket, "milk", 3)
+    assert KV.Bucket.get(bucket, "milk") == 3
+  end
+end
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　何をやらされてるのか分からん」  
+
+例:  
+
+```elixir
+test "stores values by key", %{bucket: bucket} do
+  # `bucket` is now the bucket from the setup block
+end
+```
+
+## Other agent actions
+
+例:  
+
+```elixir
+@doc """
+Deletes `key` from `bucket`.
+
+Returns the current value of `key`, if `key` exists.
+"""
+def delete(bucket, key) do
+  Agent.get_and_update(bucket, &Map.pop(&1, key))
+end
+```
+
+## Client/Server in agents
+
+例:  
+
+```elixir
+def delete(bucket, key) do
+  Agent.get_and_update(bucket, fn dict ->
+    Map.pop(dict, key)
+  end)
+end
+```
+
+例:  
+
+```elixir
+def delete(bucket, key) do
+  Process.sleep(1000) # puts client to sleep
+  Agent.get_and_update(bucket, fn dict ->
+    Process.sleep(1000) # puts server to sleep
+    Map.pop(dict, key)
+  end)
+end
+```
+
+# 3. GenServer
+
+📅 2023-04-05 wed 22:54  
+
+📖 [3. GenServer](https://elixir-lang.org/getting-started/mix-otp/genserver.html)  
+
+例:  
+
+```plaintext
+CREATE shopping
+OK
+
+PUT shopping milk 1
+OK
+
+GET shopping milk
+1
+OK
+```
+
+```shell
+iex(1)> Agent.start_link(fn -> %{} end, name: :shopping)
+{:ok, #PID<0.107.0>}
+iex(2)> KV.Bucket.put(:shopping, "milk", 1)
+:ok
+iex(3)> KV.Bucket.get(:shopping, "milk")
+1
+```
+
+## GenServer callbacks
+
+例:  
+
+```elixir
+def put(bucket, key, value) do
+  Agent.update(bucket, &Map.put(&1, key, value))
+end
+```
+
+例:  
+
+```elixir
+def put(bucket, key, value) do
+  # Here is the client code
+  Agent.update(bucket, fn state ->
+    # Here is the server code
+    Map.put(state, key, value)
+  end)
+  # Back to the client code
+end
+```
+
+例:  
+
+```elixir
+def put(bucket, key, value) do
+  # Send the server a :put "instruction"
+  GenServer.call(bucket, {:put, key, value})
+end
+
+# Server callback
+
+def handle_call({:put, key, value}, _from, state) do
+  {:reply, :ok, Map.put(state, key, value)}
+end
+```
+
+📄 `elixir-practice/projects/kv/lib/kv/registry.ex` :  
+
+```elixir
+defmodule KV.Registry do
+  use GenServer
+
+  ## Missing Client API - will add this later
+
+  ## Defining GenServer Callbacks
+
+  @impl true
+  def init(:ok) do
+    {:ok, %{}}
+  end
+
+  @impl true
+  def handle_call({:lookup, name}, _from, names) do
+    {:reply, Map.fetch(names, name), names}
+  end
+
+  @impl true
+  def handle_cast({:create, name}, names) do
+    if Map.has_key?(names, name) do
+      {:noreply, names}
+    else
+      {:ok, bucket} = KV.Bucket.start_link([])
+      {:noreply, Map.put(names, name, bucket)}
+    end
+  end
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>elixirc ./lib/kv/registry.ex
+```
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>iex
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> {:ok, registry} = GenServer.start_link(KV.Registry, :ok)
+{:ok, #PID<0.107.0>}
+iex(2)> GenServer.cast(registry, {:create, "shopping"})
+:ok
+iex(3)> {:ok, bk} = GenServer.call(registry, {:lookup, "shopping"})
+{:ok, #PID<0.110.0>}
+```
+
+## The Client API
+
+📄 `elixir-practice/projects/kv/lib/kv/registry.ex` :  ファイル更新
+
+```elixir
+defmodule KV.Registry do
+  use GenServer
+
+  ## Client API
+
+  @doc """
+  Starts the registry.
+  """
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, :ok, opts)
+  end
+
+  @doc """
+  Looks up the bucket pid for `name` stored in `server`.
+
+  Returns `{:ok, pid}` if the bucket exists, `:error` otherwise.
+  """
+  def lookup(server, name) do
+    GenServer.call(server, {:lookup, name})
+  end
+
+  @doc """
+  Ensures there is a bucket associated with the given `name` in `server`.
+  """
+  def create(server, name) do
+    GenServer.cast(server, {:create, name})
+  end
+  
+  ## Defining GenServer Callbacks
+
+  @impl true
+  def init(:ok) do
+    {:ok, %{}}
+  end
+
+  @impl true
+  def handle_call({:lookup, name}, _from, names) do
+    {:reply, Map.fetch(names, name), names}
+  end
+
+  @impl true
+  def handle_cast({:create, name}, names) do
+    if Map.has_key?(names, name) do
+      {:noreply, names}
+    else
+      {:ok, bucket} = KV.Bucket.start_link([])
+      {:noreply, Map.put(names, name, bucket)}
+    end
+  end
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>elixirc ./lib/kv/registry.ex
+warning: redefining module KV.Registry (current version loaded from Elixir.KV.Registry.beam)
+  lib/kv/registry.ex:1
+```
+
+## Testing a GenServer
+
+📄 `elixir-practice/projects/kv/test/kv/registry_test.exs` :  ファイル更新
+
+```elixir
+defmodule KV.RegistryTest do
+  use ExUnit.Case, async: true
+
+  setup do
+    registry = start_supervised!(KV.Registry)
+    %{registry: registry}
+  end
+
+  test "spawns buckets", %{registry: registry} do
+    assert KV.Registry.lookup(registry, "shopping") == :error
+
+    KV.Registry.create(registry, "shopping")
+    assert {:ok, bucket} = KV.Registry.lookup(registry, "shopping")
+
+    KV.Bucket.put(bucket, "milk", 1)
+    assert KV.Bucket.get(bucket, "milk") == 1
+  end
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>mix test
+Compiling 1 file (.ex)
+warning: redefining module KV.Registry (current version loaded from Elixir.KV.Registry.beam)
+  lib/kv/registry.ex:1
+
+Generated kv app
+....
+Finished in 0.03 seconds (0.03s async, 0.00s sync)
+1 doctest, 3 tests, 0 failures
+
+Randomized with seed 700510
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　これで合ってるのかどうか分からん」  
+
+## The need for monitoring
+
+例:  
+
+```elixir
+test "removes buckets on exit", %{registry: registry} do
+  KV.Registry.create(registry, "shopping")
+  {:ok, bucket} = KV.Registry.lookup(registry, "shopping")
+  Agent.stop(bucket)
+  assert KV.Registry.lookup(registry, "shopping") == :error
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>iex -S mix
+Compiling 2 files (.ex)
+warning: redefining module KV.Registry (current version loaded from Elixir.KV.Registry.beam)
+  lib/kv/registry.ex:1
+
+warning: redefining module KV.Bucket (current version loaded from Elixir.KV.Bucket.beam)
+  lib/kv/bucket.ex:1
+
+Generated kv app
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)>
+```
+
+```shell
+iex(1)> {:ok, pid} = KV.Bucket.start_link([])
+{:ok, #PID<0.166.0>}
+iex(2)> Process.monitor(pid)
+#Reference<0.3510449698.1195900935.198461>
+iex(3)> Agent.stop(pid)
+:ok
+iex(4)> flush()
+{:DOWN, #Reference<0.3510449698.1195900935.198461>, :process, #PID<0.166.0>,
+ :normal}
+:ok
+```
+
+📄 `elixir-practice/projects/kv/lib/kv/registry.ex` :  ファイル更新
+
+```elixir
+defmodule KV.Registry do
+  use GenServer
+
+  ## Client API
+
+  @doc """
+  Starts the registry.
+  """
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, :ok, opts)
+  end
+
+  @doc """
+  Looks up the bucket pid for `name` stored in `server`.
+  
+  Returns `{:ok, pid}` if the bucket exists, `:error` otherwise.
+  """
+  def lookup(server, name) do
+    GenServer.call(server, {:lookup, name})
+  end
+
+  @doc """
+  Ensures there is a bucket associated with the given `name` in `server`.
+  """
+  def create(server, name) do
+    GenServer.cast(server, {:create, name})
+  end
+
+  ## Server callbacks
+
+  @impl true
+  def init(:ok) do
+    names = %{}
+    refs = %{}
+    {:ok, {names, refs}}
+  end
+
+  @impl true
+  def handle_call({:lookup, name}, _from, state) do
+    {names, _} = state
+    {:reply, Map.fetch(names, name), state}
+  end
+
+  @impl true
+  def handle_cast({:create, name}, {names, refs}) do
+    if Map.has_key?(names, name) do
+      {:noreply, {names, refs}}
+    else
+      {:ok, bucket} = KV.Bucket.start_link([])
+      ref = Process.monitor(bucket)
+      refs = Map.put(refs, ref, name)
+      names = Map.put(names, name, bucket)
+      {:noreply, {names, refs}}
+    end
+  end
+
+  @impl true
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, {names, refs}) do
+    {name, refs} = Map.pop(refs, ref)
+    names = Map.delete(names, name)
+    {:noreply, {names, refs}}
+  end
+
+  @impl true
+  def handle_info(msg, state) do
+    require Logger
+    Logger.debug("Unexpected message in KV.Registry: #{inspect(msg)}")
+    {:noreply, state}
+  end
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>elixirc ./lib/kv/registry.ex
+warning: redefining module KV.Registry (current version loaded from Elixir.KV.Registry.beam)
+  lib/kv/registry.ex:1
+```
+
+## call, cast or info?
+
+省略  
+
+## Monitors or links?
+
+例:  
+
+```elixir
+{:ok, bucket} = KV.Bucket.start_link([])
+ref = Process.monitor(bucket)
+```
+
+📅 2023-04-05 wed 23:30  
+
+# 4. Supervisor and Application
+
+📖 [4. Supervisor and Application](https://elixir-lang.org/getting-started/mix-otp/supervisor-and-application.html)  
