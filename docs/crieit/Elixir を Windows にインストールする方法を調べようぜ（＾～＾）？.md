@@ -3993,3 +3993,242 @@ warning: variable "another_what_happened" does not exist and is being expanded t
 📅 2023-04-05 wed 20:09  
 
 📖 [20. Optional syntax sheet](https://elixir-lang.org/getting-started/optional-syntax.html)  
+
+```shell
+iex(9)> length([1, 2, 3]) == length [1, 2, 3]
+true
+```
+
+```shell
+iex(10)> if true do
+...(10)>   :this
+...(10)> else
+...(10)>   :that
+...(10)> end
+:this
+iex(11)> if true, do: :this, else: :that
+:this
+```
+
+## Walk-through
+
+📄 `o20o1_walk_through.ex` ファイル新規作成  
+
+```elixir
+if variable? do
+  Call.this()
+else
+  Call.that()
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixir o20o1_walk_through.ex
+warning: variable "variable?" does not exist and is being expanded to "variable?()", please use parentheses to remove the ambiguity or change the variable name
+  o20o1_walk_through.ex:1
+
+** (CompileError) o20o1_walk_through.ex:1: undefined function variable?/0 (there is no such import)
+    (elixir 1.14.3) expanding macro: Kernel.if/2
+    o20o1_walk_through.ex:1: (file)
+```
+
+例:  
+
+```elixir
+if(variable?, [{:do, Call.this()}, {:else, Call.that()}])
+```
+
+例:  
+
+```elixir
+defmodule Math do
+  def add(a, b) do
+    a + b
+  end
+end
+```
+
+例:  
+
+```elixir
+defmodule(Math, [
+  {:do, def(add(a, b), [{:do, a + b}])}
+])
+```
+
+# 21. Erlang libraries
+
+📅 2023-04-05 wed 20:24  
+
+📖 [21. Erlang libraries](https://elixir-lang.org/getting-started/erlang-libraries.html)  
+
+## The binary module
+
+```shell
+# Unicode だからうまく動かない
+iex(1)> String.to_charlist "Ø"
+'O'
+iex(2)> :binary.bin_to_list "Ø"
+'O'
+```
+
+## Formatted text output
+
+```shell
+iex(3)> :io.format("Pi is approximately given by:~10.3f~n", [:math.pi])
+Pi is approximately given by:     3.142
+:ok
+iex(4)> to_string :io_lib.format("Pi is approximately given by:~10.3f~n", [:math.pi])
+"Pi is approximately given by:     3.142\n"
+```
+
+## The crypto module
+
+```shell
+iex(5)> Base.encode16(:crypto.hash(:sha256, "Elixir"))
+"3315715A7A3AD57428298676C5AE465DADA38D951BDFAC9348A8A31E9C7401CB"
+```
+
+```shell
+iex(6)> def application do
+...(6)>   [extra_applications: [:crypto]]
+...(6)> end
+** (ArgumentError) cannot invoke def/2 outside module
+    (elixir 1.14.3) lib/kernel.ex:6387: Kernel.assert_module_scope/3
+    (elixir 1.14.3) lib/kernel.ex:5084: Kernel.define/4
+    (elixir 1.14.3) expanding macro: Kernel.def/2
+    iex:6: (file)
+```
+
+## The digraph module
+
+```shell
+iex(6)> digraph = :digraph.new()
+{:digraph, #Reference<0.2155946384.2779381763.259563>,
+ #Reference<0.2155946384.2779381763.259564>,
+ #Reference<0.2155946384.2779381763.259565>, true}
+iex(7)> coords = [{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}]
+[{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}]
+iex(8)> [v0, v1, v2] = (for c <- coords, do: :digraph.add_vertex(digraph, c))
+[{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}]
+iex(9)> :digraph.add_edge(digraph, v0, v1)
+[:"$e" | 0]
+iex(10)> :digraph.add_edge(digraph, v1, v2)
+[:"$e" | 1]
+iex(11)> :digraph.get_short_path(digraph, v0, v2)
+[{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}]
+```
+
+## Erlang Term Storage
+
+```shell
+iex(12)> table = :ets.new(:ets_test, [])
+#Reference<0.2155946384.2779381763.259625>
+iex(13)> :ets.insert(table, {"China", 1_374_000_000})
+true
+iex(14)> :ets.insert(table, {"India", 1_284_000_000})
+true
+iex(15)> :ets.insert(table, {"USA", 322_000_000})
+true
+iex(16)> :ets.i(table)
+<1   > {<<"India">>,1284000000}
+<2   > {<<"China">>,1374000000}
+<3   > {<<"USA">>,322000000}
+EOT  (q)uit (p)Digits (k)ill /Regexp -->q                                       
+:ok
+```
+
+## The math module
+
+```shell
+iex(17)> angle_45_deg = :math.pi() * 45.0 / 180.0
+0.7853981633974483
+iex(18)> :math.sin(angle_45_deg)
+0.7071067811865476
+iex(19)> :math.exp(55.0)
+7.694785265142018e23
+iex(20)> :math.log(7.694785265142018e23)
+55.0
+```
+
+## The queue module
+
+```shell
+iex(21)> q = :queue.new
+{[], []}
+iex(22)> q = :queue.in("A", q)
+{["A"], []}
+iex(23)> q = :queue.in("B", q)
+{["B"], ["A"]}
+iex(24)> {value, q} = :queue.out(q)
+{{:value, "A"}, {[], ["B"]}}
+iex(25)> value
+{:value, "A"}
+iex(26)> {value, q} = :queue.out(q)
+{{:value, "B"}, {[], []}}
+iex(27)> value
+{:value, "B"}
+iex(28)> {value, q} = :queue.out(q)
+{:empty, {[], []}}
+iex(29)> value
+:empty
+```
+
+## The rand module
+
+```shell
+iex(30)> :rand.uniform()
+0.12270424088457632
+iex(31)> _ = :rand.seed(:exs1024, {123, 123534, 345345})
+{%{
+   jump: #Function<12.34006561/1 in :rand.exs1024_jump>,
+   max: 18446744073709551615,
+   next: #Function<11.34006561/1 in :rand.exs1024_next>,
+   type: :exs1024
+ },
+ {[1777391367797874666, 1964529382746821925, 7996041688159811731,
+   16797603918550466679, 13239206057622895956, 2190120427146910527,
+   18292739386017762693, 7995684206500985125, 1619687243448614582,
+   961993414031414042, 10239938031393579756, 12249841489256032092,
+   1457887945073169212, 16031477380367994289, 12526413104181201380,
+   16202025130717851397], []}}
+iex(32)> :rand.uniform()
+0.5820506340260994
+iex(33)> :rand.uniform(6)
+6
+```
+
+## The zip and zlib modules
+
+```shell
+# ファイルが無い
+iex(34)> :zip.foldl(fn _, _, _, acc -> acc + 1 end, 0, :binary.bin_to_list("file.zip"))
+{:error, :enoent}
+```
+
+```shell
+iex(35)> song = "
+...(35)> Mary had a little lamb,
+...(35)> His fleece was white as snow,
+...(35)> And everywhere that Mary went,
+...(35)> The lamb was sure to go."
+"\nMary had a little lamb,\nHis fleece was white as snow,\nAnd everywhere that Mary went,\nThe lamb was sure to go."
+iex(36)> compressed = :zlib.compress(song)
+<<120, 156, 37, 140, 187, 13, 195, 48, 12, 5, 123, 77, 241, 6, 16, 188, 67, 186,
+  52, 233, 188, 0, 109, 189, 132, 2, 100, 9, 144, 152, 16, 222, 62, 254, 116,
+  87, 220, 93, 120, 73, 223, 161, 146, 32, 40, 217, 172, 16, 69, 182, ...>>
+iex(37)> byte_size song
+110
+iex(38)> byte_size compressed
+99
+iex(39)> :zlib.uncompress(compressed)
+"\nMary had a little lamb,\nHis fleece was white as snow,\nAnd everywhere that Mary went,\nThe lamb was sure to go."
+```
+
+# 22. Debugging
+
+📅 2023-04-05 wed 20:45  
+
+📖 [22. Debugging](https://elixir-lang.org/getting-started/debugging.html)  
