@@ -4606,5 +4606,323 @@ Run "mix help" for more commands.
 ```
 
 ![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
-「　👆　プロジェクト・フォルダーが作られたぜ」  
+「　👆　プロジェクト・フォルダーが作られたぜ」
 
+## Meta-programming
+
+省略  
+
+## Community and other resources
+
+省略  
+
+## A byte of Erlang
+
+省略  
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　その他には、 MIX と OTP のガイドがあるようだぜ」  
+
+# Introduction to Mix
+
+📅 2023-04-05 wed 21:38  
+
+📖 [Introduction to Mix](https://elixir-lang.org/getting-started/mix-otp/introduction-to-mix.html)  
+
+例: （リクエスト）  
+
+```shell
+CREATE shopping
+OK
+
+PUT shopping milk 1
+OK
+
+PUT shopping eggs 3
+OK
+
+GET shopping milk
+1
+OK
+
+DELETE shopping eggs
+OK
+```
+
+## Our first project
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>mix new projects/kv --module KV
+* creating README.md
+* creating .formatter.exs
+* creating .gitignore
+* creating mix.exs
+* creating lib
+* creating lib/kv.ex
+* creating test
+* creating test/test_helper.exs
+* creating test/kv_test.exs
+
+Your Mix project was created successfully.
+You can use "mix" to compile it, test it, and more:
+
+    cd projects/kv
+    mix test
+
+Run "mix help" for more commands.
+```
+
+ディレクトリー構成:  
+
+```plaintext
+    📂 elixir-practice
+    └─ 📂 projects
+        └─ 📂 kv
+            ├─ 📂 lib
+            │   └─ 📄 kv.ex
+            ├─ 📂 test
+            │   ├─ 📄 kv_test.exs
+            │   └─ 📄 test_helper.exs
+            ├─ 📄 .formatter.exs
+            ├─ 📄 .gitignore
+            ├─ 📄 mix.exs
+            └─ 📄 README.md
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　`mix.exs` が、メイン・ファイルみたいなもんかだぜ？」  
+
+## Project compilation
+
+`kv/mix.exs` ファイル:  
+
+```elixir
+defmodule KV.MixProject do
+  use Mix.Project
+
+  def project do
+    [
+      app: :kv,
+      version: "0.1.0",
+      elixir: "~> 1.14",
+      start_permanent: Mix.env() == :prod,
+      deps: deps()
+    ]
+  end
+
+  # Run "mix help compile.app" to learn about applications.
+  def application do
+    [
+      extra_applications: [:logger]
+    ]
+  end
+
+  # Run "mix help deps" to learn about dependencies.
+  defp deps do
+    [
+      # {:dep_from_hexpm, "~> 0.3.0"},
+      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+    ]
+  end
+end
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　`def` が、パブリック関数の定義だから、２つのパブリック関数があるな。 `project` 関数と、 `application` 関数」  
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　`project` 関数は、なんか情報を返しそうだな」  
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　`application` 関数は、何なんだろな？」  
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　`defp` はプライベート関数を定義するから、 `deps` 関数はプライベートだな。依存関係パッケージのバージョンを指定しているようにも見えるぜ」  
+
+`kv/lib/kv.ex` ファイル:  
+
+```elixir
+defmodule KV do
+  @moduledoc """
+  Documentation for `KV`.
+  """
+
+  @doc """
+  Hello world.
+
+  ## Examples
+
+      iex> KV.hello()
+      :world
+
+  """
+  def hello do
+    :world
+  end
+end
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　`hello` 関数は、メイン関数みたいなもんかな？」  
+
+Command line:  
+
+```shell
+cd projects/kv
+mix compile
+```
+
+Output:  
+
+```plaintext
+Compiling 1 file (.ex)
+Generated kv app
+```
+
+Directories:  
+
+```plaintext
+    📂 elixir-practice
+    └─ 📂 projects
+        └─ 📂 kv
+            └─ 📂 _build
+                └─ 📂 dev
+                    └─ 📂 lib
+                        └─ 📂 kv
+                            └─ 📂 ebin
+                                ├─ 📄 Elixir.KV.beam
+👉                              └─ 📄 kv.app
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　`kv.app` ファイル、分かりづらいとこに　作られてんな」  
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　実行バイナリは作らず、ソースを残すのかな？」  
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>iex -S mix
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> recompile()
+:noop
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　リコンパイルしても　なんにもしてくれね」  
+
+## Running tests
+
+```plaintext
+    📂 elixir-practice
+    └─ 📂 projects
+        └─ 📂 kv
+            └─ 📂 test
+👉              ├─ 📄 kv_test.exs
+                └─ 📄 test_helper.exs
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　`kv_test.exs` スクリプト・ファイルに、テストを書くのかな？」  
+
+📄 `kv_test.exs`:  
+
+```elixir
+defmodule KVTest do
+  use ExUnit.Case
+  doctest KV
+
+  test "greets the world" do
+    assert KV.hello() == :world
+  end
+end
+```
+
+📄 `test_helper.exs`:  
+
+```elixir
+ExUnit.start()
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>mix test
+```
+
+Output:  
+
+```shell
+iex(2)> mix test
+** (CompileError) iex:2: undefined function mix/1 (there is no such import)
+    (elixir 1.14.3) src/elixir.erl:376: :elixir.quoted_to_erl/4
+    (elixir 1.14.3) src/elixir.erl:277: :elixir.eval_forms/4
+    (elixir 1.14.3) lib/module/parallel_checker.ex:110: Module.ParallelChecker.verify/1
+    (iex 1.14.3) lib/iex/evaluator.ex:329: IEx.Evaluator.eval_and_inspect/3
+    (iex 1.14.3) lib/iex/evaluator.ex:303: IEx.Evaluator.eval_and_inspect_parsed/3
+    (iex 1.14.3) lib/iex/evaluator.ex:292: IEx.Evaluator.parse_eval_inspect/3
+    (iex 1.14.3) lib/iex/evaluator.ex:187: IEx.Evaluator.loop/1
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　分からん」  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>mix test test/kv_test.exs
+Compiling 1 file (.ex)
+Generated kv app
+..
+Finished in 0.03 seconds (0.00s async, 0.03s sync)
+1 doctest, 1 test, 0 failures
+
+Randomized with seed 225269
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　なぜ `mix test` でこうならん？」  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>mix test test/kv_test.exs:5
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　行数を指定してテストできるそうだぜ。なんの行か知らんけど」  
+
+## Automatic code formatting
+
+省略  
+
+## Environments
+
+例:  
+
+```elixir
+def project do
+  [
+    ...,
+    start_permanent: Mix.env() == :prod,
+    ...
+  ]
+end
+```
+
+例:  
+
+```shell
+> set "MIX_ENV=prod" && mix compile
+```
+
+## Exploring
+
+```shell
+mix help
+```
+
+# 2. Agent
+
+📅 2023-04-05 wed 22:38  
+
+📖 [2. Agent](https://elixir-lang.org/getting-started/mix-otp/agent.html)  
