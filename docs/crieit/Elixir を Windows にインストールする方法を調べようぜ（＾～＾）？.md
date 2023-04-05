@@ -4232,3 +4232,379 @@ iex(39)> :zlib.uncompress(compressed)
 📅 2023-04-05 wed 20:45  
 
 📖 [22. Debugging](https://elixir-lang.org/getting-started/debugging.html)  
+
+## IO.inspect/2
+
+📄 `o22o1o0_io_inspect_2.exs` ファイル新規作成  
+
+```elixir
+(1..10)
+|> IO.inspect
+|> Enum.map(fn x -> x * 2 end)
+|> IO.inspect
+|> Enum.sum
+|> IO.inspect
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixir o22o1o0_io_inspect_2.exs
+1..10
+[2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+110
+```
+
+📄 `o22o2o0_io_inspect_2.exs` ファイル新規作成  
+
+```elixir
+[1, 2, 3]
+|> IO.inspect(label: "before")
+|> Enum.map(&(&1 * 2))
+|> IO.inspect(label: "after")
+|> Enum.sum
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixir o22o2o0_io_inspect_2.exs
+before: [1, 2, 3]
+after: [2, 4, 6]
+```
+
+例1:  
+
+```elixir
+def some_fun(a, b, c) do
+  IO.inspect binding()
+  ...
+end
+```
+
+```plaintext
+[a: :foo, b: "bar", c: :baz]
+```
+
+## dbg
+
+📄 `o22o3o0_my_file.exs` ファイル新規作成  
+
+```elixir
+# In my_file.exs
+feature = %{name: :dbg, inspiration: "Rust"}
+dbg(feature)
+dbg(Map.put(feature, :in_version, "1.14.0"))
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixir o22o3o0_my_file.exs
+[o22o3o0_my_file.exs:3: (file)]
+feature #=> %{inspiration: "Rust", name: :dbg}
+
+[o22o3o0_my_file.exs:4: (file)]
+Map.put(feature, :in_version, "1.14.0") #=> %{in_version: "1.14.0", inspiration: "Rust", name: :dbg}
+```
+
+📄 `o22o4o0_dbg_pipes.exs` ファイル新規作成  
+
+```elixir
+# In dbg_pipes.exs
+__ENV__.file
+|> String.split("/", trim: true)
+|> List.last()
+|> File.exists?()
+|> dbg()
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixir o22o4o0_dbg_pipes.exs
+[o22o4o0_dbg_pipes.exs:6: (file)]
+__ENV__.file #=> "c:/Users/繧縺壹〒繧・Documents/GitHub/elixir-practice/o22o4o0_dbg_pipes.exs"
+|> String.split("/", trim: true) #=> ["c:", "Users", "繧縺壹〒繧・, "Documents", "GitHub", "elixir-practice",
+ "o22o4o0_dbg_pipes.exs"]
+|> List.last() #=> "o22o4o0_dbg_pipes.exs"
+|> File.exists?() #=> true
+```
+
+## Breakpoints
+
+省略  
+
+## Debugger
+
+📄 `o22o5o0_debugger_example.ex` ファイル新規作成  
+
+```elixir
+defmodule Example do
+  def double_sum(x, y) do
+    hard_work(x, y)
+  end
+
+  defp hard_work(x, y) do
+    x = 2 * x
+    y = 2 * y
+
+    x + y
+  end
+end
+```
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o22o5o0_debugger_example.ex
+```
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>iex
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> :debugger.start()
+{:ok, #PID<0.107.0>}
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　おっ、ウィンドウが出てきたぜ」  
+
+```shell
+iex(2)> :int.ni(Example)
+{:module, Example}
+iex(3)> :int.break(Example, 3)
+:ok
+iex(4)> Example.double_sum(1, 2)
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　さっぱり分かんね」  
+
+## Observer
+
+```shell
+iex(1)> :observer.start()
+:ok
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　ウィンドウが出てきたぜ」  
+
+## Other tools and community
+
+省略  
+
+# 23. Typespecs and behaviours
+
+📅 2023-04-05 wed 21:11  
+
+📖 [23. Typespecs and behaviours](https://elixir-lang.org/getting-started/typespecs-and-behaviours.html)  
+
+## Types and specs
+
+省略  
+
+## Function specifications
+
+省略  
+
+## Defining custom types
+
+📄 `o23o1o0_person.ex` ファイル新規作成  
+
+📅 2023-04-05 wed 21:14  
+
+```elixir
+defmodule Person do
+   @typedoc """
+   A 4 digit year, e.g. 1984
+   """
+   @type year :: integer
+
+   @spec current_age(year) :: integer
+   def current_age(year_of_birth), do: # implementation
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>elixirc o23o1o0_person.ex
+
+== Compilation error in file o23o1o0_person.ex ==
+** (SyntaxError) o23o1o0_person.ex:9:1: syntax error before: end. "end" is a reserved word in Elixir and therefore its usage is limited. For instance, it can't be used as a variable or be defined nor invoked as a regular function
+    (elixir 1.14.3) lib/kernel/parallel_compiler.ex:340: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/7       
+```
+
+例:  
+
+```elixir
+@type error_map :: %{
+   message: String.t,
+   line_number: integer
+}
+```
+
+例:  
+
+```elixir
+defmodule LousyCalculator do
+  @spec add(number, number) :: {number, String.t}
+  def add(x, y), do: {x + y, "You need a calculator to do that?!"}
+
+  @spec multiply(number, number) :: {number, String.t}
+  def multiply(x, y), do: {x * y, "Jeez, come on!"}
+end
+```
+
+例:  
+
+```elixir
+defmodule LousyCalculator do
+  @typedoc """
+  Just a number followed by a string.
+  """
+  @type number_with_remark :: {number, String.t}
+
+  @spec add(number, number) :: number_with_remark
+  def add(x, y), do: {x + y, "You need a calculator to do that?"}
+
+  @spec multiply(number, number) :: number_with_remark
+  def multiply(x, y), do: {x * y, "It is like addition on steroids."}
+end
+```
+
+例:  
+
+```elixir
+defmodule QuietCalculator do
+  @spec add(number, number) :: number
+  def add(x, y), do: make_quiet(LousyCalculator.add(x, y))
+
+  @spec make_quiet(LousyCalculator.number_with_remark) :: number
+  defp make_quiet({num, _remark}), do: num
+end
+```
+
+## Static code analysis
+
+省略  
+
+## Behaviours
+
+省略
+
+## Defining behaviours
+
+例:  
+
+```elixir
+defmodule Parser do
+  @doc """
+  Parses a string.
+  """
+  @callback parse(String.t) :: {:ok, term} | {:error, String.t}
+
+  @doc """
+  Lists all supported file extensions.
+  """
+  @callback extensions() :: [String.t]
+end
+```
+
+## Adopting behaviours
+
+例:  
+
+```elixir
+defmodule JSONParser do
+  @behaviour Parser
+
+  @impl Parser
+  def parse(str), do: {:ok, "some json " <> str} # ... parse JSON
+
+  @impl Parser
+  def extensions, do: ["json"]
+end
+```
+
+例:  
+
+```elixir
+defmodule YAMLParser do
+  @behaviour Parser
+
+  @impl Parser
+  def parse(str), do: {:ok, "some yaml " <> str} # ... parse YAML
+
+  @impl Parser
+  def extensions, do: ["yml"]
+end
+```
+
+例:  
+
+```elixir
+defmodule BADParser do
+  @behaviour Parser
+
+  @impl Parser
+  def parse, do: {:ok, "something bad"}
+
+  @impl Parser
+  def extensions, do: ["bad"]
+end
+```
+
+## Dynamic dispatch
+
+例:  
+
+```elixir
+defmodule Parser do
+  @callback parse(String.t) :: {:ok, term} | {:error, String.t}
+  @callback extensions() :: [String.t]
+
+  def parse!(implementation, contents) do
+    case implementation.parse(contents) do
+      {:ok, data} -> data
+      {:error, error} -> raise ArgumentError, "parsing error: #{error}"
+    end
+  end
+end
+```
+
+# 24. Where to go next
+
+📅 2023-04-05 wed 21:22  
+
+📖 [24. Where to go next](https://elixir-lang.org/getting-started/where-to-go-next.html)  
+
+## Build your first Elixir project
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>mix new projects/hello
+* creating README.md
+* creating .formatter.exs
+* creating .gitignore
+* creating mix.exs
+* creating lib
+* creating lib/hello.ex
+* creating test
+* creating test/test_helper.exs
+* creating test/hello_test.exs
+
+Your Mix project was created successfully.
+You can use "mix" to compile it, test it, and more:
+
+    cd projects/hello
+    mix test
+
+Run "mix help" for more commands.
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　プロジェクト・フォルダーが作られたぜ」  
+
