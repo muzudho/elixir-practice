@@ -1,5 +1,8 @@
 defmodule KV.Bucket do
-  use Agent
+  # Remove (MIT AND OTP / 5. Dynamic supervisors / The bucket supervisor)
+  # use Agent
+  # Add (MIT AND OTP / 5. Dynamic supervisors / The bucket supervisor)
+  use Agent, restart: :temporary
 
   @doc """
   Starts a new bucket.

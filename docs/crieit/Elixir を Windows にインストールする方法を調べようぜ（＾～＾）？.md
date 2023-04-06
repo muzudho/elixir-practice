@@ -5785,3 +5785,376 @@ iex(2)> KV.Registry.lookup(KV.Registry, "shopping")
 📅 2023-04-06 thu 18:50  
 
 📖 [5. Dynamic supervisors](https://elixir-lang.org/getting-started/mix-otp/dynamic-supervisor.html)  
+
+例:  
+
+```elixir
+{:ok, bucket} = KV.Bucket.start_link([])
+ref = Process.monitor(bucket)
+```
+
+📄 `elixir-practice/projects/kv/test/kv/registry_test.exs` :  ファイル更新  
+
+```elixir
+defmodule KV.RegistryTest do
+  use ExUnit.Case, async: true
+
+  setup do
+    registry = start_supervised!(KV.Registry)
+    %{registry: registry}
+  end
+
+  test "spawns buckets", %{registry: registry} do
+    assert KV.Registry.lookup(registry, "shopping") == :error
+
+    KV.Registry.create(registry, "shopping")
+    assert {:ok, bucket} = KV.Registry.lookup(registry, "shopping")
+
+    KV.Bucket.put(bucket, "milk", 1)
+    assert KV.Bucket.get(bucket, "milk") == 1
+  end
+
+  # Add (MIX AND OTP / 5. Dynamic supervisors)
+  test "removes bucket on crash", %{registry: registry} do
+    KV.Registry.create(registry, "shopping")
+    {:ok, bucket} = KV.Registry.lookup(registry, "shopping")
+
+    # Stop the bucket with non-normal reason
+    Agent.stop(bucket, :shutdown)
+    assert KV.Registry.lookup(registry, "shopping") == :error
+  end
+end
+```
+
+Command line:  
+
+```shell
+# 失敗の例
+iex(3)> バッチ ジョブを終了しますか (Y/N)? y
+
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>mix test
+Compiling 3 files (.ex)
+warning: redefining module KV.Registry (current version loaded from Elixir.KV.Registry.beam)
+  lib/kv/registry.ex:1
+
+warning: redefining module KV.Supervisor (current version loaded from Elixir.KV.Supervisor.beam)
+  lib/kv/supervisor.ex:1
+
+warning: got "@impl true" for function start/2 but no behaviour was declared
+  lib/kv.ex:21: KV (module)
+
+Generated kv app
+.
+
+  1) test removes bucket on crash (KV.RegistryTest)
+     test/kv/registry_test.exs:20
+     ** (exit) exited in: GenServer.call(#PID<0.202.0>, {:lookup, "shopping"}, 5000)
+         ** (EXIT) no process: the process is not alive or there's no process currently associated with the given name, possibly because its application isn't started
+     code: assert KV.Registry.lookup(registry, "shopping") == :error
+     stacktrace:
+       (elixir 1.14.3) lib/gen_server.ex:1038: GenServer.call/3
+       test/kv/registry_test.exs:26: (test)
+
+.warning: KV.hello/0 is undefined or private
+Invalid call found at 2 locations:
+  (for doctest at) lib/kv.ex:11: KVTest."doctest KV.start/2 (1)"/1
+  test/kv_test.exs:6: KVTest."test greets the world"/1
+
+
+
+  2) test greets the world (KVTest)
+     test/kv_test.exs:5
+     ** (UndefinedFunctionError) function KV.hello/0 is undefined or private
+     code: assert KV.hello() == :world
+     stacktrace:
+       (kv 0.1.0) KV.hello()
+       test/kv_test.exs:6: (test)
+
+
+
+  3) doctest KV.start/2 (1) (KVTest)
+     test/kv_test.exs:3
+     ** (UndefinedFunctionError) function KV.hello/0 is undefined or private
+     stacktrace:
+       (kv 0.1.0) KV.hello()
+       (for doctest at) lib/kv.ex:11: (test)
+
+
+Finished in 0.08 seconds (0.08s async, 0.00s sync)
+1 doctest, 4 tests, 3 failures
+
+Randomized with seed 305636
+```
+
+## The bucket supervisor
+
+📄 `elixir-practice/projects/kv/lib/kv/supervisor.ex` :  ファイル更新  
+
+```elixir
+defmodule KV.Supervisor do
+  use Supervisor
+
+  def start_link(opts) do
+    Supervisor.start_link(__MODULE__, :ok, opts)
+  end
+
+  @impl true
+  def init(:ok) do
+    # children = [
+    #   KV.Registry
+    # ]
+    children = [
+      {KV.Registry, name: KV.Registry},
+
+      # Add (MIT AND OTP / 5. Dynamic supervisors / The bucket supervisor)
+      {DynamicSupervisor, name: KV.BucketSupervisor, strategy: :one_for_one}
+    ]
+
+    Supervisor.init(children, strategy: :one_for_one)
+  end
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>iex -S mix
+Compiling 1 file (.ex)
+warning: redefining module KV.Supervisor (current version loaded from Elixir.KV.Supervisor.beam)
+  lib/kv/supervisor.ex:1
+
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> {:ok, bucket} = DynamicSupervisor.start_child(KV.BucketSupervisor, KV.Bucket)
+{:ok, #PID<0.165.0>}
+iex(2)> KV.Bucket.put(bucket, "eggs", 3)
+:ok     
+iex(3)> KV.Bucket.get(bucket, "eggs")
+3
+```
+
+📄 `elixir-practice/projects/kv/lib/kv/registry.ex` :  ファイル更新  
+
+```elixir
+defmodule KV.Registry do
+  use GenServer
+
+  ## Client API
+
+  @doc """
+  Starts the registry.
+  """
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, :ok, opts)
+  end
+
+  @doc """
+  Looks up the bucket pid for `name` stored in `server`.
+  
+  Returns `{:ok, pid}` if the bucket exists, `:error` otherwise.
+  """
+  def lookup(server, name) do
+    GenServer.call(server, {:lookup, name})
+  end
+
+  @doc """
+  Ensures there is a bucket associated with the given `name` in `server`.
+  """
+  def create(server, name) do
+    GenServer.cast(server, {:create, name})
+  end
+
+  ## Server callbacks
+
+  @impl true
+  def init(:ok) do
+    names = %{}
+    refs = %{}
+    {:ok, {names, refs}}
+  end
+
+  @impl true
+  def handle_call({:lookup, name}, _from, state) do
+    {names, _} = state
+    {:reply, Map.fetch(names, name), state}
+  end
+
+  # Remove (MIT AND OTP / 5. Dynamic supervisors / The bucket supervisor)
+  # @impl true
+  # def handle_cast({:create, name}, {names, refs}) do
+  #   if Map.has_key?(names, name) do
+  #     {:noreply, {names, refs}}
+  #   else
+  #     {:ok, bucket} = KV.Bucket.start_link([])
+  #     ref = Process.monitor(bucket)
+  #     refs = Map.put(refs, ref, name)
+  #     names = Map.put(names, name, bucket)
+  #     {:noreply, {names, refs}}
+  #   end
+  # end
+
+  # Add (MIT AND OTP / 5. Dynamic supervisors / The bucket supervisor)
+  @impl true
+  def handle_cast({:create, name}, {names, refs}) do
+    if Map.has_key?(names, name) do
+      {:noreply, {names, refs}}
+    else
+      {:ok, pid} = DynamicSupervisor.start_child(KV.BucketSupervisor, KV.Bucket)
+      ref = Process.monitor(pid)
+      refs = Map.put(refs, ref, name)
+      names = Map.put(names, name, pid)
+      {:noreply, {names, refs}}
+    end
+  end
+
+  @impl true
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, {names, refs}) do
+    {name, refs} = Map.pop(refs, ref)
+    names = Map.delete(names, name)
+    {:noreply, {names, refs}}
+  end
+
+  @impl true
+  def handle_info(msg, state) do
+    require Logger
+    Logger.debug("Unexpected message in KV.Registry: #{inspect(msg)}")
+    {:noreply, state}
+  end
+end
+```
+
+📄 `elixir-practice/projects/kv/lib/kv/bucket.ex` :  ファイル更新  
+
+```elixir
+defmodule KV.Bucket do
+  # Remove (MIT AND OTP / 5. Dynamic supervisors / The bucket supervisor)
+  # use Agent
+  # Add (MIT AND OTP / 5. Dynamic supervisors / The bucket supervisor)
+  use Agent, restart: :temporary
+
+  @doc """
+  Starts a new bucket.
+  """
+  def start_link(_opts) do
+    Agent.start_link(fn -> %{} end)
+  end
+
+  @doc """
+  Gets a value from the `bucket` by `key`.
+  """
+  def get(bucket, key) do
+    Agent.get(bucket, &Map.get(&1, key))
+  end
+
+  @doc """
+  Puts the `value` for the given `key` in the `bucket`.
+  """
+  def put(bucket, key, value) do
+    Agent.update(bucket, &Map.put(&1, key, value))
+  end
+end
+```
+
+📄 `elixir-practice/projects/kv/test/kv/bucket_test.ex` :  ファイル更新  
+
+```elixir
+defmodule KV.BucketTest do
+  use ExUnit.Case, async: true
+
+  # 失敗するテストの例？
+  # test "stores values by key" do
+  #   {:ok, bucket} = KV.Bucket.start_link([])
+  #   assert KV.Bucket.get(bucket, "milk") == nil
+  #
+  #   KV.Bucket.put(bucket, "milk", 3)
+  #   assert KV.Bucket.get(bucket, "milk") == 3
+  # end
+
+  setup do
+    {:ok, bucket} = KV.Bucket.start_link([])
+    %{bucket: bucket}
+  end
+
+  test "stores values by key", %{bucket: bucket} do
+    assert KV.Bucket.get(bucket, "milk") == nil
+
+    KV.Bucket.put(bucket, "milk", 3)
+    assert KV.Bucket.get(bucket, "milk") == 3
+  end
+
+  # Add (MIT AND OTP / 5. Dynamic supervisors / The bucket supervisor)
+  test "are temporary workers" do
+    assert Supervisor.child_spec(KV.Bucket, []).restart == :temporary
+  end
+end
+```
+
+## Supervision trees
+
+📄 `elixir-practice/projects/kv/lib/kv/supervisor.ex` :  ファイル更新  
+
+```elixir
+defmodule KV.Supervisor do
+  use Supervisor
+
+  def start_link(opts) do
+    Supervisor.start_link(__MODULE__, :ok, opts)
+  end
+
+  @impl true
+  def init(:ok) do
+    # children = [
+    #   KV.Registry
+    # ]
+    children = [
+      # Remove (MIT AND OTP / 5. Dynamic supervisors / Supervision trees)
+      # {KV.Registry, name: KV.Registry},
+
+      # Add (MIT AND OTP / 5. Dynamic supervisors / The bucket supervisor)
+      {DynamicSupervisor, name: KV.BucketSupervisor, strategy: :one_for_one},
+
+      # Add (MIT AND OTP / 5. Dynamic supervisors / Supervision trees)
+      {KV.Registry, name: KV.Registry}
+    ]
+
+    # Remove (MIT AND OTP / 5. Dynamic supervisors / Supervision trees)
+    # Supervisor.init(children, strategy: :one_for_one)
+    # Add (MIT AND OTP / 5. Dynamic supervisors / Supervision trees)
+    Supervisor.init(children, strategy: :one_for_all)
+  end
+end
+```
+
+## Shared state in tests
+
+例:  
+
+```elixir
+setup do
+  registry = start_supervised!(KV.Registry)
+  %{registry: registry}
+end
+```
+
+## Observer
+
+```shell
+iex(4)> :observer.start
+:ok
+```
+
+👆　ウィンドウが出てくる  
+
+オブザーバー・アプリケーション・ウィンドウの `[Application]` タブをクリック  
+
+```shell
+iex(5)> KV.Registry.create(KV.Registry, "shopping")
+:ok
+```
+
+👆　グラフがリアルタイムに更新される  
+
+# 6. ETS
+
+📅 2023-04-06 thu 19:53  
+
+📖 [6. ETS](https://elixir-lang.org/getting-started/mix-otp/ets.html)  
