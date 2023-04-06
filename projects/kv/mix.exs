@@ -14,7 +14,10 @@ defmodule KV.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger],
+
+      # Add（MIX AND OTP / 4. Supervisor and Application / The application callback）
+      mod: {KV, []}
     ]
   end
 

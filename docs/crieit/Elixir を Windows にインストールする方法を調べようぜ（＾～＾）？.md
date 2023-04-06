@@ -5495,3 +5495,293 @@ ref = Process.monitor(bucket)
 # 4. Supervisor and Application
 
 📖 [4. Supervisor and Application](https://elixir-lang.org/getting-started/mix-otp/supervisor-and-application.html)  
+
+省略  
+
+## Our first supervisor
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　スーパーバイザーというのは、アプリケーションのプロセスが落ちてないか監視するプロセスらしい、知らんけど」  
+
+📄 `elixir-practice/projects/kv/lib/kv/supervisor.ex` :  ファイル新規作成  
+
+```elixir
+defmodule KV.Supervisor do
+  use Supervisor
+
+  def start_link(opts) do
+    Supervisor.start_link(__MODULE__, :ok, opts)
+  end
+
+  @impl true
+  def init(:ok) do
+    children = [
+      KV.Registry
+    ]
+
+    Supervisor.init(children, strategy: :one_for_one)
+  end
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>elixirc ./lib/kv/supervisor.ex
+```
+
+```shell
+iex(1)> KV.Registry.child_spec([])
+%{id: KV.Registry, start: {KV.Registry, :start_link, [[]]}}
+```
+
+```shell
+iex(2)> {:ok, sup} = KV.Supervisor.start_link([])
+{:ok, #PID<0.108.0>}
+iex(3)> Supervisor.which_children(sup)
+[{KV.Registry, #PID<0.109.0>, :worker, [KV.Registry]}]
+```
+
+```shell
+# わざとクラッシュさせる例
+iex(4)> [{_, registry, _, _}] = Supervisor.which_children(sup)
+[{KV.Registry, #PID<0.109.0>, :worker, [KV.Registry]}]
+iex(5)> GenServer.call(registry, :bad_input)
+
+18:22:01.476 [error] GenServer #PID<0.109.0> terminating
+** (FunctionClauseError) no function clause matching in KV.Registry.handle_call/3
+    lib/kv/registry.ex:39: KV.Registry.handle_call(:bad_input, {#PID<0.105.0>, [:alias | #Reference<0.2481409310.2446393349.13988>]}, {%{}, %{}})
+    (stdlib 4.0.1) gen_server.erl:1146: :gen_server.try_handle_call/4
+    (stdlib 4.0.1) gen_server.erl:1175: :gen_server.handle_msg/6
+    (stdlib 4.0.1) proc_lib.erl:240: :proc_lib.init_p_do_apply/3
+Last message (from #PID<0.105.0>): :bad_input
+State: {%{}, %{}}
+Client #PID<0.105.0> is alive
+
+    (stdlib 4.0.1) gen.erl:256: :gen.do_call/4
+    (elixir 1.14.3) lib/gen_server.ex:1035: GenServer.call/3
+    (elixir 1.14.3) src/elixir.erl:309: anonymous fn/4 in :elixir.eval_external_handler/1
+    (stdlib 4.0.1) erl_eval.erl:748: :erl_eval.do_apply/7
+    (elixir 1.14.3) src/elixir.erl:294: :elixir.eval_forms/4
+    (elixir 1.14.3) lib/module/parallel_checker.ex:110: Module.ParallelChecker.verify/1
+    (iex 1.14.3) lib/iex/evaluator.ex:329: IEx.Evaluator.eval_and_inspect/3
+    (iex 1.14.3) lib/iex/evaluator.ex:303: IEx.Evaluator.eval_and_inspect_parsed/3
+** (exit) exited in: GenServer.call(#PID<0.109.0>, :bad_input, 5000)
+    ** (EXIT) an exception was raised:
+        ** (FunctionClauseError) no function clause matching in KV.Registry.handle_call/3
+            lib/kv/registry.ex:39: KV.Registry.handle_call(:bad_input, {#PID<0.105.0>, [:alias | #Reference<0.2481409310.2446393349.13988>]}, {%{}, %{}})
+            (stdlib 4.0.1) gen_server.erl:1146: :gen_server.try_handle_call/4
+            (stdlib 4.0.1) gen_server.erl:1175: :gen_server.handle_msg/6
+            (stdlib 4.0.1) proc_lib.erl:240: :proc_lib.init_p_do_apply/3
+    (elixir 1.14.3) lib/gen_server.ex:1038: GenServer.call/3
+    iex:5: (file)
+iex(5)> Supervisor.which_children(sup)
+[{KV.Registry, #PID<0.113.0>, :worker, [KV.Registry]}]
+```
+
+## Naming processes
+
+📄 `elixir-practice/projects/kv/lib/kv/supervisor.ex` :  ファイル更新  
+
+```elixir
+defmodule KV.Supervisor do
+  use Supervisor
+
+  def start_link(opts) do
+    Supervisor.start_link(__MODULE__, :ok, opts)
+  end
+
+  @impl true
+  def init(:ok) do
+    # children = [
+    #   KV.Registry
+    # ]
+    children = [
+      {KV.Registry, name: KV.Registry}
+    ]
+
+    Supervisor.init(children, strategy: :one_for_one)
+  end
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>iex -S mix
+Compiling 2 files (.ex)
+warning: redefining module KV.Supervisor (current version loaded from Elixir.KV.Supervisor.beam)
+  lib/kv/supervisor.ex:1
+
+warning: redefining module KV.Registry (current version loaded from Elixir.KV.Registry.beam)
+  lib/kv/registry.ex:1
+
+Generated kv app
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> 
+```
+
+```shell
+iex(1)> KV.Supervisor.start_link([])
+{:ok, #PID<0.166.0>}
+iex(2)> KV.Registry.create(KV.Registry, "shopping")
+:ok
+iex(3)> KV.Registry.lookup(KV.Registry, "shopping")
+{:ok, #PID<0.170.0>}
+```
+
+## Understanding applications
+
+📄 `elixir-practice/projects/kv/_build/dev/lib/kv/ebin/kv.app` :  ファイル更新  
+
+```erlang
+{application,kv,
+             [{applications,[kernel,stdlib,elixir,logger]},
+              {description,"kv"},
+              {modules,['Elixir.KV','Elixir.KV.Bucket','Elixir.KV.Registry',
+                        'Elixir.KV.Supervisor']},
+              {registered,[]},
+              {vsn,"0.1.0"}]}.
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　Erlang構文だそうだぜ」  
+
+## Starting applications
+
+```shell
+# Mix が既に起動させているので、起動させなくていいという例
+iex(4)> Application.start(:kv)
+{:error, {:already_started, :kv}}
+```
+
+```shell
+# 練習用の操作
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>iex -S mix run --no-start
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> Application.start(:kv)
+:ok
+```
+
+```shell
+iex(2)> Application.stop(:kv)
+
+18:36:57.217 [notice] Application kv exited: :stopped
+:ok
+iex(3)> Application.stop(:logger)
+:ok
+```
+
+```shell
+iex(4)> Application.start(:kv)
+{:error, {:not_started, :logger}}
+```
+
+```shell
+iex(5)> Application.ensure_all_started(:kv)
+{:ok, [:logger, :kv]}
+```
+
+## The application callback
+
+📄 `elixir-practice/projects/kv/mix.exs` :  ファイル更新  
+
+```elixir
+defmodule KV.MixProject do
+  use Mix.Project
+
+  def project do
+    [
+      app: :kv,
+      version: "0.1.0",
+      elixir: "~> 1.14",
+      start_permanent: Mix.env() == :prod,
+      deps: deps()
+    ]
+  end
+
+  # Run "mix help compile.app" to learn about applications.
+  def application do
+    [
+      extra_applications: [:logger],
+
+      # Add（MIX AND OTP / 4. Supervisor and Application / The application callback）
+      mod: {KV, []}
+    ]
+  end
+
+  # Run "mix help deps" to learn about dependencies.
+  defp deps do
+    [
+      # {:dep_from_hexpm, "~> 0.3.0"},
+      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+    ]
+  end
+end
+```
+
+👆　実質１行追加  
+
+📄 `elixir-practice/projects/kv/lib/kv.ex` :  ファイル更新  
+
+```elixir
+defmodule KV do
+  @moduledoc """
+  Documentation for `KV`.
+  """
+
+  @doc """
+  Hello world.
+
+  ## Examples
+
+      iex> KV.hello()
+      :world
+
+  """
+
+  # def hello do
+  #   :world
+  # end
+
+  @impl true
+  def start(_type, _args) do
+    # Although we don't use the supervisor name below directly,
+    # it can be useful when debugging or introspecting the system.
+    KV.Supervisor.start_link(name: KV.Supervisor)
+  end
+end
+```
+
+```shell
+iex(6)> バッチ ジョブを終了しますか (Y/N)? y
+
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>iex -S mix
+Compiling 1 file (.ex)
+warning: got "@impl true" for function start/2 but no behaviour was declared
+  lib/kv.ex:21: KV (module)
+
+Generated kv app
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+```
+
+```shell
+iex(1)> KV.Registry.create(KV.Registry, "shopping")
+:ok
+iex(2)> KV.Registry.lookup(KV.Registry, "shopping")
+{:ok, #PID<0.167.0>}
+```
+
+## Projects or applications?
+
+省略  
+
+## Next steps
+
+省略  
+
+# 5. Dynamic supervisors
+
+📅 2023-04-06 thu 18:50  
+
+📖 [5. Dynamic supervisors](https://elixir-lang.org/getting-started/mix-otp/dynamic-supervisor.html)  
