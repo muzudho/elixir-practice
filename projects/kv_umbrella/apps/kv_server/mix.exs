@@ -31,7 +31,7 @@ defmodule KVServer.MixProject do
       # {:sibling_app_in_umbrella, in_umbrella: true},
 
       # Add (MIX AND OTP / 7. Dependencies and umbrella projects / External dependencies)
-      [{:kv, in_umbrella: true}]
+      {:kv, in_umbrella: true}
     ]
   end
 end
