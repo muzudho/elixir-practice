@@ -6953,11 +6953,13 @@ defmodule KV.MixProject do
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
 
       # Add (MIX AND OTP / 7. Dependencies and umbrella projects / External dependencies)
+      # 動かないのでコメントアウトした
       # {:plug, "~> 1.0"}
-      {:plug, git: "https://github.com/elixir-lang/plug.git"},
+      # {:plug, git: "https://github.com/elixir-lang/plug.git"},
 
       # Add（MIX AND OTP / 7. Dependencies and umbrella projects / Dependencies within an umbrella project）
-      {:kv, in_umbrella: true}
+      # 動かないのでコメントアウトした
+      # {:kv, in_umbrella: true}
     ]
   end
 end
@@ -6968,6 +6970,80 @@ Command line:
 ```shell
 C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella>mix test
 ** (Mix) App kv lists itself as a dependency
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　合ってるのかどうか　分からん！」  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella>mix test
+==> kv
+Compiling 4 files (.ex)
+warning: redefining module KV.Registry (current version loaded from Elixir.KV.Registry.beam)
+  lib/kv/registry.ex:1
+
+warning: redefining module KV.Bucket (current version loaded from Elixir.KV.Bucket.beam)
+  lib/kv/bucket.ex:1
+
+warning: redefining module KV.Supervisor (current version loaded from Elixir.KV.Supervisor.beam)
+  lib/kv/supervisor.ex:1
+
+warning: got "@impl true" for function start/2 but no behaviour was declared
+  lib/kv.ex:21: KV (module)
+
+Generated kv app
+==> kv_server
+Compiling 1 file (.ex)
+Generated kv_server app
+==> kv
+......warning: KV.hello/0 is undefined or private
+Invalid call found at 2 locations:
+  (for doctest at) lib/kv.ex:11: KVTest."doctest KV.start/2 (1)"/1
+  test/kv_test.exs:6: KVTest."test greets the world"/1
+
+
+
+  1) doctest KV.start/2 (1) (KVTest)
+     apps/kv/test/kv_test.exs:3
+     ** (UndefinedFunctionError) function KV.hello/0 is undefined or private
+     stacktrace:
+       (kv 0.1.0) KV.hello()
+       (for doctest at) lib/kv.ex:11: (test)
+
+
+
+  2) test greets the world (KVTest)
+     apps/kv/test/kv_test.exs:5
+     ** (UndefinedFunctionError) function KV.hello/0 is undefined or private
+     code: assert KV.hello() == :world
+     stacktrace:
+       (kv 0.1.0) KV.hello()
+       test/kv_test.exs:6: (test)
+
+
+Finished in 0.06 seconds (0.06s async, 0.00s sync)
+1 doctest, 7 tests, 2 failures
+
+Randomized with seed 889568
+==> kv_server
+warning: KVServer.hello/0 is undefined or private
+  test/kv_server_test.exs:6: KVServerTest."test greets the world"/1
+
+
+
+  1) test greets the world (KVServerTest)
+     apps/kv_server/test/kv_server_test.exs:5
+     ** (UndefinedFunctionError) function KVServer.hello/0 is undefined or private
+     code: assert KVServer.hello() == :world
+     stacktrace:
+       (kv_server 0.1.0) KVServer.hello()
+       test/kv_server_test.exs:6: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+1 test, 1 failure
+
+Randomized with seed 889568
 ```
 
 ![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
@@ -6986,3 +7062,78 @@ C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella>mix 
 📅 2023-04-06 thu 21:28  
 
 📖 [8. Task and gen_tcp](https://elixir-lang.org/getting-started/mix-otp/task-and-gen-tcp.html)  
+
+## Echo server
+
+📄 `elixir-practice/projects/kv_umbrella/apps/kv_server/lib/kv_server.ex` ファイルを上書き：  
+
+```elixir
+defmodule KVServer do
+  require Logger
+
+  def accept(port) do
+    # The options below mean:
+    #
+    # 1. `:binary` - receives data as binaries (instead of lists)
+    # 2. `packet: :line` - receives data line by line
+    # 3. `active: false` - blocks on `:gen_tcp.recv/2` until data is available
+    # 4. `reuseaddr: true` - allows us to reuse the address if the listener crashes
+    #
+    {:ok, socket} =
+      :gen_tcp.listen(port, [:binary, packet: :line, active: false, reuseaddr: true])
+
+    Logger.info("Accepting connections on port #{port}")
+    loop_acceptor(socket)
+  end
+
+  defp loop_acceptor(socket) do
+    {:ok, client} = :gen_tcp.accept(socket)
+    serve(client)
+    loop_acceptor(socket)
+  end
+
+  defp serve(socket) do
+    socket
+    |> read_line()
+    |> write_line(socket)
+
+    serve(socket)
+  end
+
+  defp read_line(socket) do
+    {:ok, data} = :gen_tcp.recv(socket, 0)
+    data
+  end
+
+  defp write_line(line, socket) do
+    :gen_tcp.send(socket, line)
+  end
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella>cd apps/kv_server
+
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella\apps\kv_server>iex -S mix
+Compiling 1 file (.ex)
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)> 
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　これでいいのか？？」  
+
+```shell
+iex(1)> KVServer.accept(4040)
+
+22:43:16.771 [info] Accepting connections on port 4040
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　Windows のファイアーウォールにブロックされた。通信をしようとしている証拠だぜ」  
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　しかし　キー入力しても　何も起こらん」  
+

@@ -38,10 +38,10 @@ defmodule KV.MixProject do
 
       # Add (MIX AND OTP / 7. Dependencies and umbrella projects / External dependencies)
       # {:plug, "~> 1.0"}
-      {:plug, git: "https://github.com/elixir-lang/plug.git"},
+      # {:plug, git: "https://github.com/elixir-lang/plug.git"}
 
       # Add（MIX AND OTP / 7. Dependencies and umbrella projects / Dependencies within an umbrella project）
-      {:kv, in_umbrella: true}
+      # {:kv, in_umbrella: true}
     ]
   end
 end
