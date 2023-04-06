@@ -7137,3 +7137,56 @@ iex(1)> KVServer.accept(4040)
 ![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
 「　しかし　キー入力しても　何も起こらん」  
 
+![ohkina-hiyoko-futsu2.png](https://crieit.now.sh/upload_images/96fb09724c3ce40ee0861a0fd1da563d61daf8a09d9bc.png)  
+「　それは　サーバーだから入力しても何も起こらないんじゃない？  
+クライアントから入力するもんじゃないの？」  
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　そうか！」  
+
+📖 [How to unsupress local echo](https://stackoverflow.com/questions/1098503/how-to-unsupress-local-echo)  
+
+Command line:  
+
+```shell
+telnet 127.0.0.1 4040
+```
+
+ここで `[Ctrl] + "]"` キーを打鍵  
+
+```shell
+set localecho
+```
+
+次に `[Enter]` キーを空打ち  
+
+Input:  
+
+```shell
+hello
+```
+
+Output:  
+
+```shell
+hello
+```
+
+ここで `[Ctrl] + "]"` キーを打鍵  
+
+Input:  
+
+```shell
+quit
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　テルネットの操作なんか覚えてなかったが、調べてやったった。  
+入力した文字が　もう１回出てくるぜ」  
+
+![ohkina-hiyoko-futsu2.png](https://crieit.now.sh/upload_images/96fb09724c3ce40ee0861a0fd1da563d61daf8a09d9bc.png)  
+「　エコー・サーバーができたのね」  
+
+## Tasks
+
+📅 2023-04-06 thu 22:54 - 疲れたから今日は終わり  
