@@ -6153,8 +6153,760 @@ iex(5)> KV.Registry.create(KV.Registry, "shopping")
 
 👆　グラフがリアルタイムに更新される  
 
-# 6. ETS
+# 6. ETS  (Erlang Term Storage) 
 
 📅 2023-04-06 thu 19:53  
 
 📖 [6. ETS](https://elixir-lang.org/getting-started/mix-otp/ets.html)  
+
+## ETS as a cache
+
+```shell
+iex(6)> table = :ets.new(:buckets_registry, [:set, :protected])
+#Reference<0.2000971521.38928389.137320>
+iex(7)> :ets.insert(table, {"foo", self()})
+true
+iex(8)> :ets.lookup(table, "foo")
+[{"foo", #PID<0.163.0>}]
+```
+
+```shell
+iex(9)> :ets.new(:buckets_registry, [:named_table])
+:buckets_registry
+iex(10)> :ets.insert(:buckets_registry, {"foo", self()})
+true
+iex(11)> :ets.lookup(:buckets_registry, "foo")
+[{"foo", #PID<0.163.0>}]
+```
+
+📄 `elixir-practice/projects/kv/lib/kv/registry.ex` :  ファイルを `registry.ex_old1.txt` などにリネームしてバックアップを取っておき、  
+📄 `elixir-practice/projects/kv/lib/kv/registry.ex` :  ファイル新規作成  
+
+```elixir
+defmodule KV.Registry do
+  use GenServer
+
+  ## Client API
+
+  @doc """
+  Starts the registry with the given options.
+
+  `:name` is always required.
+  """
+  def start_link(opts) do
+    # 1. Pass the name to GenServer's init
+    server = Keyword.fetch!(opts, :name)
+    GenServer.start_link(__MODULE__, server, opts)
+  end
+
+  @doc """
+  Looks up the bucket pid for `name` stored in `server`.
+
+  Returns `{:ok, pid}` if the bucket exists, `:error` otherwise.
+  """
+  def lookup(server, name) do
+    # 2. Lookup is now done directly in ETS, without accessing the server
+    case :ets.lookup(server, name) do
+      [{^name, pid}] -> {:ok, pid}
+      [] -> :error
+    end
+  end
+
+  @doc """
+  Ensures there is a bucket associated with the given `name` in `server`.
+  """
+  def create(server, name) do
+    GenServer.cast(server, {:create, name})
+  end
+
+  ## Server callbacks
+
+  @impl true
+  def init(table) do
+    # 3. We have replaced the names map by the ETS table
+    names = :ets.new(table, [:named_table, read_concurrency: true])
+    refs  = %{}
+    {:ok, {names, refs}}
+  end
+
+  # 4. The previous handle_call callback for lookup was removed
+
+  @impl true
+  def handle_cast({:create, name}, {names, refs}) do
+    # 5. Read and write to the ETS table instead of the map
+    case lookup(names, name) do
+      {:ok, _pid} ->
+        {:noreply, {names, refs}}
+      :error ->
+        {:ok, pid} = DynamicSupervisor.start_child(KV.BucketSupervisor, KV.Bucket)
+        ref = Process.monitor(pid)
+        refs = Map.put(refs, ref, name)
+        :ets.insert(names, {name, pid})
+        {:noreply, {names, refs}}
+    end
+  end
+
+  @impl true
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, {names, refs}) do
+    # 6. Delete from the ETS table instead of the map
+    {name, refs} = Map.pop(refs, ref)
+    :ets.delete(names, name)
+    {:noreply, {names, refs}}
+  end
+
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
+end
+```
+
+📄 `elixir-practice/projects/kv/test/kv/registry_test.ex` ファイル更新：  
+
+```elixir
+defmodule KV.RegistryTest do
+  use ExUnit.Case, async: true
+
+  # Remove (MIX AND OTP / 6. ETS / ETS as a cache)
+  # setup do
+  #   registry = start_supervised!(KV.Registry)
+  #   %{registry: registry}
+  # end
+
+  # Add (MIX AND OTP / 6. ETS / ETS as a cache)
+  setup context do
+    _ = start_supervised!({KV.Registry, name: context.test})
+    %{registry: context.test}
+  end
+
+  test "spawns buckets", %{registry: registry} do
+    assert KV.Registry.lookup(registry, "shopping") == :error
+
+    KV.Registry.create(registry, "shopping")
+    assert {:ok, bucket} = KV.Registry.lookup(registry, "shopping")
+
+    KV.Bucket.put(bucket, "milk", 1)
+    assert KV.Bucket.get(bucket, "milk") == 1
+  end
+
+  # Add (MIX AND OTP / 5. Dynamic supervisors)
+  test "removes bucket on crash", %{registry: registry} do
+    KV.Registry.create(registry, "shopping")
+    {:ok, bucket} = KV.Registry.lookup(registry, "shopping")
+
+    # Stop the bucket with non-normal reason
+    Agent.stop(bucket, :shutdown)
+    assert KV.Registry.lookup(registry, "shopping") == :error
+  end
+end
+```
+
+## Race conditions?
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　デッドロックの説明でも始めるのかだぜ？？」  
+
+📄 `elixir-practice/projects/kv/lib/kv/registry.ex` :  ファイル更新  
+
+```elixir
+defmodule KV.Registry do
+  use GenServer
+
+  ## Client API
+
+  @doc """
+  Starts the registry with the given options.
+  
+  `:name` is always required.
+  """
+  def start_link(opts) do
+    # 1. Pass the name to GenServer's init
+    server = Keyword.fetch!(opts, :name)
+    GenServer.start_link(__MODULE__, server, opts)
+  end
+
+  @doc """
+  Looks up the bucket pid for `name` stored in `server`.
+  
+  Returns `{:ok, pid}` if the bucket exists, `:error` otherwise.
+  """
+  def lookup(server, name) do
+    # 2. Lookup is now done directly in ETS, without accessing the server
+    case :ets.lookup(server, name) do
+      [{^name, pid}] -> {:ok, pid}
+      [] -> :error
+    end
+  end
+
+  @doc """
+  Ensures there is a bucket associated with the given `name` in `server`.
+  """
+  def create(server, name) do
+    # Remove (MIX AND OTP / 6. ETS / Race conditions?)
+    # GenServer.cast(server, {:create, name})
+    # Add (MIX AND OTP / 6. ETS / Race conditions?)
+    GenServer.call(server, {:create, name})
+  end
+
+  ## Server callbacks
+
+  @impl true
+  def init(table) do
+    # 3. We have replaced the names map by the ETS table
+    names = :ets.new(table, [:named_table, read_concurrency: true])
+    refs = %{}
+    {:ok, {names, refs}}
+  end
+
+  # 4. The previous handle_call callback for lookup was removed
+
+  # Remove (MIX AND OTP / 6. ETS / Race conditions?)
+  # @impl true
+  # def handle_cast({:create, name}, {names, refs}) do
+  #   # 5. Read and write to the ETS table instead of the map
+  #   case lookup(names, name) do
+  #     {:ok, _pid} ->
+  #       {:noreply, {names, refs}}
+  #
+  #     :error ->
+  #       {:ok, pid} = DynamicSupervisor.start_child(KV.BucketSupervisor, KV.Bucket)
+  #       ref = Process.monitor(pid)
+  #       refs = Map.put(refs, ref, name)
+  #       :ets.insert(names, {name, pid})
+  #       {:noreply, {names, refs}}
+  #   end
+  # end
+
+  # Add (MIX AND OTP / 6. ETS / Race conditions?)
+  @impl true
+  def handle_call({:create, name}, _from, {names, refs}) do
+    case lookup(names, name) do
+      {:ok, pid} ->
+        {:reply, pid, {names, refs}}
+
+      :error ->
+        {:ok, pid} = DynamicSupervisor.start_child(KV.BucketSupervisor, KV.Bucket)
+        ref = Process.monitor(pid)
+        refs = Map.put(refs, ref, name)
+        :ets.insert(names, {name, pid})
+        {:reply, pid, {names, refs}}
+    end
+  end
+
+  @impl true
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, {names, refs}) do
+    # 6. Delete from the ETS table instead of the map
+    {name, refs} = Map.pop(refs, ref)
+    :ets.delete(names, name)
+    {:noreply, {names, refs}}
+  end
+
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
+end
+```
+
+Command line:  
+
+```shell
+iex(12)> バッチ ジョブを終了しますか (Y/N)? y
+
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>mix test --trace
+Compiling 3 files (.ex)
+warning: redefining module KV.Registry (current version loaded from Elixir.KV.Registry.beam)
+  lib/kv/registry.ex:1
+
+warning: redefining module KV.Supervisor (current version loaded from Elixir.KV.Supervisor.beam)
+  lib/kv/supervisor.ex:1
+
+warning: redefining module KV.Bucket (current version loaded from Elixir.KV.Bucket.beam)
+  lib/kv/bucket.ex:1
+
+
+KV.BucketTest [test/kv/bucket_test.exs]
+  * test stores values by key (0.2ms) [L#18]
+  * test are temporary workers (0.00ms) [L#26]
+
+KV.RegistryTest [test/kv/registry_test.exs]
+  * test spawns buckets (0.1ms) [L#16]
+  * test removes bucket on crash (8.3ms) [L#27]
+
+  1) test removes bucket on crash (KV.RegistryTest)
+     test/kv/registry_test.exs:27
+     Assertion with == failed
+     code:  assert KV.Registry.lookup(registry, "shopping") == :error
+     left:  {:ok, #PID<0.209.0>}
+     right: :error
+     stacktrace:
+       test/kv/registry_test.exs:33: (test)
+
+warning: KV.hello/0 is undefined or private
+Invalid call found at 2 locations:
+  (for doctest at) lib/kv.ex:11: KVTest."doctest KV.start/2 (1)"/1
+  test/kv_test.exs:6: KVTest."test greets the world"/1
+
+
+KVTest [test/kv_test.exs]
+  * doctest KV.start/2 (1) (1.6ms) [L#3]
+
+  2) doctest KV.start/2 (1) (KVTest)
+     test/kv_test.exs:3
+     ** (UndefinedFunctionError) function KV.hello/0 is undefined or private
+     stacktrace:
+       (kv 0.1.0) KV.hello()
+       (for doctest at) lib/kv.ex:11: (test)
+
+  * test greets the world (0.1ms) [L#5]
+
+  3) test greets the world (KVTest)
+     test/kv_test.exs:5
+     ** (UndefinedFunctionError) function KV.hello/0 is undefined or private
+     code: assert KV.hello() == :world
+     stacktrace:
+       (kv 0.1.0) KV.hello()
+       test/kv_test.exs:6: (test)
+
+
+Finished in 0.05 seconds (0.05s async, 0.00s sync)
+1 doctest, 5 tests, 3 failures
+
+Randomized with seed 466765
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　分けわからん」  
+
+📄 `elixir-practice/projects/kv/test/kv/registry_test.ex` ファイル更新：  
+
+```elixir
+defmodule KV.RegistryTest do
+  use ExUnit.Case, async: true
+
+  # Remove (MIX AND OTP / 6. ETS / ETS as a cache)
+  # setup do
+  #   registry = start_supervised!(KV.Registry)
+  #   %{registry: registry}
+  # end
+
+  # Add (MIX AND OTP / 6. ETS / ETS as a cache)
+  setup context do
+    _ = start_supervised!({KV.Registry, name: context.test})
+    %{registry: context.test}
+  end
+
+  test "spawns buckets", %{registry: registry} do
+    assert KV.Registry.lookup(registry, "shopping") == :error
+
+    KV.Registry.create(registry, "shopping")
+    assert {:ok, bucket} = KV.Registry.lookup(registry, "shopping")
+
+    KV.Bucket.put(bucket, "milk", 1)
+    assert KV.Bucket.get(bucket, "milk") == 1
+  end
+
+  # Add (MIX AND OTP / 6. ETS / Race conditions?)
+  test "removes buckets on exit", %{registry: registry} do
+    KV.Registry.create(registry, "shopping")
+    {:ok, bucket} = KV.Registry.lookup(registry, "shopping")
+    Agent.stop(bucket)
+
+    # Do a call to ensure the registry processed the DOWN message
+    _ = KV.Registry.create(registry, "bogus")
+    assert KV.Registry.lookup(registry, "shopping") == :error
+  end
+
+  # Add (MIX AND OTP / 5. Dynamic supervisors)
+  test "removes bucket on crash", %{registry: registry} do
+    KV.Registry.create(registry, "shopping")
+    {:ok, bucket} = KV.Registry.lookup(registry, "shopping")
+
+    # Stop the bucket with non-normal reason
+    Agent.stop(bucket, :shutdown)
+
+    # Add (MIX AND OTP / 6. ETS / Race conditions?)
+    # Do a call to ensure the registry processed the DOWN message
+    _ = KV.Registry.create(registry, "bogus")
+
+    assert KV.Registry.lookup(registry, "shopping") == :error
+  end
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>mix test --trace
+
+KV.BucketTest [test/kv/bucket_test.exs]
+  * test are temporary workers (0.8ms) [L#26]
+  * test stores values by key (0.00ms) [L#18]
+
+KV.RegistryTest [test/kv/registry_test.exs]  
+  * test removes buckets on exit (3.1ms) [L#27]
+  * test removes bucket on crash (0.1ms) [L#38]
+  * test spawns buckets (0.1ms) [L#16]
+warning: KV.hello/0 is undefined or private
+Invalid call found at 2 locations:
+  (for doctest at) lib/kv.ex:11: KVTest."doctest KV.start/2 (1)"/1
+  test/kv_test.exs:6: KVTest."test greets the world"/1
+
+
+KVTest [test/kv_test.exs]
+  * test greets the world (1.2ms) [L#5]
+
+  1) test greets the world (KVTest)
+     test/kv_test.exs:5
+     ** (UndefinedFunctionError) function KV.hello/0 is undefined or private
+     code: assert KV.hello() == :world
+     stacktrace:
+       (kv 0.1.0) KV.hello()
+       test/kv_test.exs:6: (test)
+
+  * doctest KV.start/2 (1) (0.00ms) [L#3]
+
+  2) doctest KV.start/2 (1) (KVTest)
+     test/kv_test.exs:3
+     ** (UndefinedFunctionError) function KV.hello/0 is undefined or private
+     stacktrace:
+       (kv 0.1.0) KV.hello()
+       (for doctest at) lib/kv.ex:11: (test)
+
+
+Finished in 0.05 seconds (0.05s async, 0.00s sync)
+1 doctest, 6 tests, 2 failures
+
+Randomized with seed 328589
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　分けわからん」  
+
+📄 `elixir-practice/projects/kv/test/kv/registry_test.ex` ファイルに一部追加：  
+
+```elixir
+  test "bucket can crash at any time", %{registry: registry} do
+    KV.Registry.create(registry, "shopping")
+    {:ok, bucket} = KV.Registry.lookup(registry, "shopping")
+
+    # Simulate a bucket crash by explicitly and synchronously shutting it down
+    Agent.stop(bucket, :shutdown)
+
+    # Now trying to call the dead process causes a :noproc exit
+    catch_exit KV.Bucket.put(bucket, "milk", 3)
+  end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>mix test --trace
+
+KV.BucketTest [test/kv/bucket_test.exs]
+  * test are temporary workers (2.1ms) [L#26]       
+  * test stores values by key (0.1ms) [L#18]        
+
+KV.RegistryTest [test/kv/registry_test.exs]
+  * test removes buckets on exit (2.5ms) [L#27]     
+  * test removes bucket on crash (0.1ms) [L#38]     
+  * test bucket can crash at any time (0.1ms) [L#53]
+  * test spawns buckets (0.1ms) [L#16]
+warning: KV.hello/0 is undefined or private
+Invalid call found at 2 locations:
+  (for doctest at) lib/kv.ex:11: KVTest."doctest KV.start/2 (1)"/1
+  test/kv_test.exs:6: KVTest."test greets the world"/1
+
+
+KVTest [test/kv_test.exs]
+  * test greets the world (1.1ms) [L#5]
+
+  1) test greets the world (KVTest)
+     test/kv_test.exs:5
+     ** (UndefinedFunctionError) function KV.hello/0 is undefined or private
+     code: assert KV.hello() == :world
+     stacktrace:
+       (kv 0.1.0) KV.hello()
+       test/kv_test.exs:6: (test)
+
+  * doctest KV.start/2 (1) (0.00ms) [L#3]
+
+  2) doctest KV.start/2 (1) (KVTest)
+     test/kv_test.exs:3
+     ** (UndefinedFunctionError) function KV.hello/0 is undefined or private
+     stacktrace:
+       (kv 0.1.0) KV.hello()
+       (for doctest at) lib/kv.ex:11: (test)
+
+
+Finished in 0.06 seconds (0.06s async, 0.00s sync)
+1 doctest, 7 tests, 2 failures
+
+Randomized with seed 14147
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　分からん」  
+
+# 7. Dependencies and umbrella projects
+
+📅 2023-04-06 thu 20:33  
+
+📖 [7. Dependencies and umbrella projects](https://elixir-lang.org/getting-started/mix-otp/dependencies-and-umbrella-projects.html)  
+
+省略  
+
+## External dependencies
+
+📄 `elixir-practice/projects/kv/mix.exs` ファイル更新：（以下のプライベートメソッド）  
+
+```elixir
+  # Run "mix help deps" to learn about dependencies.
+  defp deps do
+    [
+      # {:dep_from_hexpm, "~> 0.3.0"},
+      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
+
+      # Add (MIX AND OTP / 7. Dependencies and umbrella projects / External dependencies)
+      # {:plug, "~> 1.0"}
+      {:plug, git: "https://github.com/elixir-lang/plug.git"}
+    ]
+  end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv>mix help
+
+# 中略
+# 以下は依存関係に関するもの
+mix deps              # Lists dependencies and their status
+mix deps.clean        # Deletes the given dependencies' files
+mix deps.compile      # Compiles dependencies
+mix deps.get          # Gets all out of date dependencies
+mix deps.tree         # Prints the dependency tree
+mix deps.unlock       # Unlocks the given dependencies
+mix deps.update       # Updates the given dependencies
+# 後略
+```
+
+## Internal dependencies
+
+例：（Git リポジトリにプッシュする場合）  
+
+```elixir
+def deps do
+  [
+    {:kv, git: "https://github.com/YOUR_ACCOUNT/kv.git"}
+  ]
+end
+```
+
+👆 これより、アプリケーションの機能を使った方がいい？？  
+
+## Umbrella projects
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>mix new projects/kv_umbrella --umbrella
+* creating README.md
+* creating .formatter.exs
+* creating .gitignore
+* creating mix.exs
+* creating apps
+* creating config
+* creating config/config.exs
+
+Your umbrella project was created successfully.
+Inside your project, you will find an apps/ directory
+where you can create and host many apps:
+
+    cd projects/kv_umbrella
+    cd apps
+    mix new my_app
+
+Commands like "mix compile" and "mix test" when executed
+in the umbrella project root will automatically run
+for each application in the apps/ directory.
+```
+
+📄 `elixir-practice/projects/kv_umbrella/mix.exs` ファイルを開く：  
+
+```elixir
+defmodule KvUmbrella.MixProject do
+  use Mix.Project
+
+  def project do
+    [
+      apps_path: "apps",
+      version: "0.1.0",
+      start_permanent: Mix.env() == :prod,
+      deps: deps()
+    ]
+  end
+
+  # Dependencies listed here are available only for this
+  # project and cannot be accessed from applications inside
+  # the apps folder.
+  #
+  # Run "mix help deps" for examples and options.
+  defp deps do
+    []
+  end
+end
+```
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice>cd projects/kv_umbrella/apps
+```
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella\apps>mix new kv_server --module KVServer --sup
+* creating README.md
+* creating .formatter.exs
+* creating .gitignore
+* creating mix.exs
+* creating lib
+* creating lib/kv_server.ex
+* creating lib/kv_server/application.ex
+* creating test
+* creating test/test_helper.exs
+* creating test/kv_server_test.exs
+
+Your Mix project was created successfully.
+You can use "mix" to compile it, test it, and more:
+
+    cd kv_server
+    mix test
+
+Run "mix help" for more commands.
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　アンブレラ・プロジェクトの中に　また　プロジェクトを作った！」  
+
+📄 `elixir-practice/projects/kv_umbrella/apps/kv_server/mix.exs` ファイルを開く：  
+
+```elixir
+defmodule KVServer.MixProject do
+  use Mix.Project
+
+  def project do
+    [
+      app: :kv_server,
+      version: "0.1.0",
+      build_path: "../../_build",
+      config_path: "../../config/config.exs",
+      deps_path: "../../deps",
+      lockfile: "../../mix.lock",
+      elixir: "~> 1.14",
+      start_permanent: Mix.env() == :prod,
+      deps: deps()
+    ]
+  end
+
+  # Run "mix help compile.app" to learn about applications.
+  def application do
+    [
+      extra_applications: [:logger],
+      mod: {KVServer.Application, []}
+    ]
+  end
+
+  # Run "mix help deps" to learn about dependencies.
+  defp deps do
+    [
+      # {:dep_from_hexpm, "~> 0.3.0"},
+      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
+      # {:sibling_app_in_umbrella, in_umbrella: true}
+    ]
+  end
+end
+```
+
+👇　例：（アンブレラの下にある構造）  
+
+```plaintext
+build_path: "../../_build",
+config_path: "../../config/config.exs",
+deps_path: "../../deps",
+lockfile: "../../mix.lock",
+```
+
+👇　例：（アンブレラの下にある構造）  
+
+```elixir
+def application do
+  [
+    extra_applications: [:logger],
+    mod: {KVServer.Application, []}
+  ]
+end
+```
+
+📄 `elixir-practice/projects/kv_umbrella/apps/kv_server/lib/kv_server/application.ex` ファイルを開く：  
+
+```elixir
+defmodule KVServer.Application do
+  # See https://hexdocs.pm/elixir/Application.html
+  # for more information on OTP Applications
+  @moduledoc false
+
+  use Application
+
+  @impl true
+  def start(_type, _args) do
+    children = [
+      # Starts a worker by calling: KVServer.Worker.start_link(arg)
+      # {KVServer.Worker, arg}
+    ]
+
+    # See https://hexdocs.pm/elixir/Supervisor.html
+    # for other strategies and supported options
+    opts = [strategy: :one_for_one, name: KVServer.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+end
+```
+
+Command line:  
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella\apps>cd ../
+
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella>mix test
+==> kv_server
+Compiling 2 files (.ex)
+Generated kv_server app
+==> kv_server
+..
+Finished in 0.03 seconds (0.00s async, 0.03s sync)
+1 doctest, 1 test, 0 failures
+
+Randomized with seed 951388
+```
+
+## Dependencies within an umbrella project
+
+📄 `elixir-practice/projects/kv_umbrella/apps/kv_server/mix.exs` ファイルを部分更新：  
+
+以下のプライベート関数を更新:  
+
+```elixier
+  # Run "mix help deps" to learn about dependencies.
+  defp deps do
+    [
+      # {:dep_from_hexpm, "~> 0.3.0"},
+      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
+      # {:sibling_app_in_umbrella, in_umbrella: true},
+
+      # Add (MIX AND OTP / 7. Dependencies and umbrella projects / External dependencies)
+      [{:kv, in_umbrella: true}]
+    ]
+  end
+```
+
+📂 `elixir-practice/projects/kv` フォルダーを、  
+📂 `elixir-practice/projects/kv_umbrella/apps` フォルダーの下へ移動  
