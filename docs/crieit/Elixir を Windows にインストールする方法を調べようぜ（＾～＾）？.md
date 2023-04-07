@@ -7690,4 +7690,41 @@ iex(1)> KVServer.Command.parse("UNKNOWN shopping eggs\r\n")
 
 ## Summing up
 
-**疲れたから省略**
+**疲れたから省略**  
+
+# META-PROGRAMMING IN ELIXIR
+
+## 1. Quote and unquote
+
+### Quoting
+
+### Unquoting
+
+### Escaping
+
+## 2. Macros
+
+### Foreword
+
+### Our first macro
+
+### Macro hygiene
+
+### The environment
+
+### Private macros
+
+### Write macros responsibly
+
+## 3. Domain-specific languages
+
+### Foreword
+
+### Building our own test case
+
+### The `test` macro
+
+### Storing information with attributes
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　さっぱり　分からん」  
