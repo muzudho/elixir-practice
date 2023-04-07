@@ -7426,3 +7426,39 @@ Input:
 ```shell
 quit
 ```
+
+📄 `elixir-practice/projects/kv_umbrella/apps/kv_server/lib/kv_server/application.ex` ファイルを一部更新：  
+
+👇　以下のメソッドを更新  
+
+```elixir
+  @impl true
+  def start(_type, _args) do
+    port = String.to_integer(System.get_env("PORT") || "4040")
+
+    children = [
+      # Starts a worker by calling: KVServer.Worker.start_link(arg)
+      # {KVServer.Worker, arg}
+
+      # Add (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+      {Task.Supervisor, name: KVServer.TaskSupervisor},
+
+      # Remove (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+      # # Add (MIX AND OTP / 8. Task and gen_tcp / Tasks)
+      # {Task, fn -> KVServer.accept(port) end}
+      # Add (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+      Supervisor.child_spec({Task, fn -> KVServer.accept(port) end}, restart: :permanent)
+    ]
+
+    # See https://hexdocs.pm/elixir/Supervisor.html
+    # for other strategies and supported options
+    opts = [strategy: :one_for_one, name: KVServer.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+```
+
+# 9. Doctests, patterns and with
+
+📅 2023-04-07 fri 19:53  
+
+📖 [9. Doctests, patterns and with](https://elixir-lang.org/getting-started/mix-otp/docs-tests-and-with.html)  

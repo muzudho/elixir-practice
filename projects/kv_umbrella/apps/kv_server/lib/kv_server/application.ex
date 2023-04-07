@@ -16,8 +16,11 @@ defmodule KVServer.Application do
       # Add (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
       {Task.Supervisor, name: KVServer.TaskSupervisor},
 
-      # Add (MIX AND OTP / 8. Task and gen_tcp / Tasks)
-      {Task, fn -> KVServer.accept(port) end}
+      # Remove (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+      # # Add (MIX AND OTP / 8. Task and gen_tcp / Tasks)
+      # {Task, fn -> KVServer.accept(port) end}
+      # Add (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+      Supervisor.child_spec({Task, fn -> KVServer.accept(port) end}, restart: :permanent)
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

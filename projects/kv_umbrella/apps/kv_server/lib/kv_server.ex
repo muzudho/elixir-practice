@@ -1,6 +1,9 @@
 defmodule KVServer do
   require Logger
 
+  @doc """
+  Starts accepting connections on the given `port`.
+  """
   def accept(port) do
     # The options below mean:
     #
