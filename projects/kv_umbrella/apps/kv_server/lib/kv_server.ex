@@ -18,7 +18,17 @@ defmodule KVServer do
 
   defp loop_acceptor(socket) do
     {:ok, client} = :gen_tcp.accept(socket)
-    serve(client)
+
+    # Remove (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+    # # Remove (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+    # # serve(client)
+    # # Add (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+    # # Task.start_link(fn -> serve(client) end)
+
+    # Add (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+    {:ok, pid} = Task.Supervisor.start_child(KVServer.TaskSupervisor, fn -> serve(client) end)
+    :ok = :gen_tcp.controlling_process(client, pid)
+
     loop_acceptor(socket)
   end
 

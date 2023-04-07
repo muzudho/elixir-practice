@@ -13,6 +13,9 @@ defmodule KVServer.Application do
       # Starts a worker by calling: KVServer.Worker.start_link(arg)
       # {KVServer.Worker, arg}
 
+      # Add (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+      {Task.Supervisor, name: KVServer.TaskSupervisor},
+
       # Add (MIX AND OTP / 8. Task and gen_tcp / Tasks)
       {Task, fn -> KVServer.accept(port) end}
     ]

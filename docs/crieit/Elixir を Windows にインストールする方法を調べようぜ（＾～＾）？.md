@@ -7235,10 +7235,6 @@ port = String.to_integer(System.get_env("PORT") || "4040")
 
 👆　この改造も入れる  
 
-```shell
-mix run --no-halt
-```
-
 Command line:  
 
 ```shell
@@ -7307,7 +7303,121 @@ hello
 
 ## Task supervisor
 
+📄 `elixir-practice/projects/kv_umbrella/apps/kv_server/lib/kv_server.ex` ファイルを更新：  
 
+👇　変更前  
+
+```elixir
+defp loop_acceptor(socket) do
+  {:ok, client} = :gen_tcp.accept(socket)
+  serve(client)
+  loop_acceptor(socket)
+end
+```
+
+👇　変更後  
+
+```elixir
+defp loop_acceptor(socket) do
+  {:ok, client} = :gen_tcp.accept(socket)
+  Task.start_link(fn -> serve(client) end)
+  loop_acceptor(socket)
+end
+```
+
+📄 `elixir-practice/projects/kv_umbrella/apps/kv_server/lib/kv_server/application.ex` ファイルを一部更新：  
+
+👇　以下のメソッドを更新  
+
+```elixir
+  @impl true
+  def start(_type, _args) do
+    port = String.to_integer(System.get_env("PORT") || "4040")
+
+    children = [
+      # Starts a worker by calling: KVServer.Worker.start_link(arg)
+      # {KVServer.Worker, arg}
+
+      # Add (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+      {Task.Supervisor, name: KVServer.TaskSupervisor},
+
+      # Add (MIX AND OTP / 8. Task and gen_tcp / Tasks)
+      {Task, fn -> KVServer.accept(port) end}
+    ]
+
+    # See https://hexdocs.pm/elixir/Supervisor.html
+    # for other strategies and supported options
+    opts = [strategy: :one_for_one, name: KVServer.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+```
+
+📄 `elixir-practice/projects/kv_umbrella/apps/kv_server/lib/kv_server.ex` ファイルをさらに更新：  
+
+👇　以下のメソッドを更新  
+
+```elixir
+  defp loop_acceptor(socket) do
+    {:ok, client} = :gen_tcp.accept(socket)
+
+    # Remove (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+    # # Remove (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+    # # serve(client)
+    # # Add (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+    # # Task.start_link(fn -> serve(client) end)
+
+    # Add (MIX AND OTP / 8. Task and gen_tcp / Task supervisor)
+    {:ok, pid} = Task.Supervisor.start_child(KVServer.TaskSupervisor, fn -> serve(client) end)
+    :ok = :gen_tcp.controlling_process(client, pid)
+
+    loop_acceptor(socket)
+  end
+```
+
+Command line:  
+
+```shell
+# ポート番号を変える
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella\apps\kv_server>set PORT=4040
+
+# サーバー起動
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella\apps\kv_server>mix run --no-halt
+Compiling 2 files (.ex)
+
+19:34:09.755 [info] Accepting connections on port 4040
+```
+
+👇（サーバーとは別の）ターミナルを開く  
+
+Command line:  
+
+```shell
+telnet 127.0.0.1 4040
+```
+
+ここで `[Ctrl] + "]"` キーを打鍵  
+
+```shell
+set localecho
+```
+
+次に `[Enter]` キーを空打ち  
+
+Input:  
+
+```shell
+say you
+```
+
+Output:  
+
+```shell
+say you
+```
+
+👆　別のターミナルを開いて、同じことをやる。今度はうまくいく  
+
+👇　telnet を終わるとき  
 
 ここで `[Ctrl] + "]"` キーを打鍵  
 
