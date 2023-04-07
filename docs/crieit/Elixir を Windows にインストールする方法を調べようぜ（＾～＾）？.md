@@ -7462,3 +7462,232 @@ quit
 📅 2023-04-07 fri 19:53  
 
 📖 [9. Doctests, patterns and with](https://elixir-lang.org/getting-started/mix-otp/docs-tests-and-with.html)  
+
+## Doctest
+
+📄 `elixir-practice/projects/kv_umbrella/apps/kv_server/lib/kv_server/command.ex` ファイル新規作成：  
+
+```elixir
+defmodule KVServer.Command do
+  @doc ~S"""
+  Parses the given `line` into a command.
+  
+  ## Examples
+  
+      iex> KVServer.Command.parse("CREATE shopping\r\n")
+      {:ok, {:create, "shopping"}}
+  
+  """
+  def parse(_line) do
+    :not_implemented
+  end
+end
+```
+
+📄 `elixir-practice/projects/kv_umbrella/apps/kv_server/test/kv_server/command_test.exs` ファイル新規作成：  
+
+```elixir
+defmodule KVServer.CommandTest do
+  use ExUnit.Case, async: true
+  doctest KVServer.Command
+end
+```
+
+Command line:  
+
+```shell
+# 失敗する例
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella\apps\kv_server>mix test
+Compiling 3 files (.ex)
+Generated kv_server app
+
+20:06:55.718 [info] Accepting connections on port 4040
+
+
+  1) doctest KVServer.Command.parse/1 (1) (KVServer.CommandTest)
+     test/kv_server/command_test.exs:3
+     Doctest failed
+     doctest:
+       iex> KVServer.Command.parse("CREATE shopping\r\n")
+       {:ok, {:create, "shopping"}}
+     code:  KVServer.Command.parse("CREATE shopping\r\n") === {:ok, {:create, "shopping"}}
+     left:  :not_implemented
+     right: {:ok, {:create, "shopping"}}
+     stacktrace:
+       lib/kv_server/command.ex:7: KVServer.Command (module)
+
+warning: KVServer.hello/0 is undefined or private
+  test/kv_server_test.exs:6: KVServerTest."test greets the world"/1
+
+
+
+  2) test greets the world (KVServerTest)
+     test/kv_server_test.exs:5
+     ** (UndefinedFunctionError) function KVServer.hello/0 is undefined or private
+     code: assert KVServer.hello() == :world
+     stacktrace:
+       (kv_server 0.1.0) KVServer.hello()
+       test/kv_server_test.exs:6: (test)
+
+
+Finished in 0.03 seconds (0.03s async, 0.00s sync)
+1 doctest, 1 test, 2 failures
+
+Randomized with seed 733178
+```
+
+📄 `elixir-practice/projects/kv_umbrella/apps/kv_server/test/kv_server/command_test.exs` ファイル更新：  
+
+```elixir
+defmodule KVServer.CommandTest do
+  use ExUnit.Case, async: true
+  doctest KVServer.Command
+
+  def parse(line) do
+    case String.split(line) do
+      ["CREATE", bucket] -> {:ok, {:create, bucket}}
+    end
+  end
+end
+```
+
+例：（何だろうこれ）  
+
+```elixir
+@doc ~S"""
+Parses the given `line` into a command.
+
+## Examples
+
+    iex> KVServer.Command.parse "CREATE shopping\r\n"
+    {:ok, {:create, "shopping"}}
+
+    iex> KVServer.Command.parse "CREATE  shopping  \r\n"
+    {:ok, {:create, "shopping"}}
+
+    iex> KVServer.Command.parse "PUT shopping milk 1\r\n"
+    {:ok, {:put, "shopping", "milk", "1"}}
+
+    iex> KVServer.Command.parse "GET shopping milk\r\n"
+    {:ok, {:get, "shopping", "milk"}}
+
+    iex> KVServer.Command.parse "DELETE shopping eggs\r\n"
+    {:ok, {:delete, "shopping", "eggs"}}
+
+Unknown commands or commands with the wrong number of
+arguments return an error:
+
+    iex> KVServer.Command.parse "UNKNOWN shopping eggs\r\n"
+    {:error, :unknown_command}
+
+    iex> KVServer.Command.parse "GET shopping\r\n"
+    {:error, :unknown_command}
+
+"""
+```
+
+
+Command line:  
+
+```shell
+# 失敗
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella\apps\kv_server>mix test
+```
+
+```shell
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella\apps\kv_server>iex -S mix
+Compiling 3 files (.ex)
+Generated kv_server app
+Interactive Elixir (1.14.3) - press Ctrl+C to exit (type h() ENTER for help)
+
+20:19:05.910 [info] Accepting connections on port 4040
+iex(1)> KVServer.Command.parse("UNKNOWN shopping eggs\r\n")
+:not_implemented
+```
+
+![ramen-tabero-futsu2.png](https://crieit.now.sh/upload_images/d27ea8dcfad541918d9094b9aed83e7d61daf8532bbbe.png)  
+「　👆　分からん。うまくいかない」  
+
+**分からないから省略**
+
+## with
+
+**疲れたから省略**
+
+## Running commands
+
+**疲れたから省略**
+
+# 10. Distributed tasks and tags
+
+📅 2023-04-07 fri 20:22  
+
+📖 [10. Distributed tasks and tags](https://elixir-lang.org/getting-started/mix-otp/distributed-tasks.html)  
+
+## Our first distributed code
+
+**疲れたから省略**
+
+## async/await
+
+**疲れたから省略**
+
+## Distributed tasks
+
+**疲れたから省略**
+
+## Routing layer
+
+**疲れたから省略**
+
+## Test filters and tags
+
+**疲れたから省略**
+
+## Wiring it all up
+
+**疲れたから省略**
+
+## Summing up
+
+**疲れたから省略**
+
+# 11. Configuration and releases
+
+📅 2023-04-07 fri 20:25  
+
+## Application environment
+
+**疲れたから省略**
+
+## Configuration
+
+**疲れたから省略**
+
+## Releases
+
+**疲れたから省略**
+
+## Why releases?
+
+**疲れたから省略**
+
+## Assembling multiple releases
+
+**疲れたから省略**
+
+## Configuring releases
+
+**疲れたから省略**
+
+## Operating System environment configuration
+
+**疲れたから省略**
+
+## VM args
+
+**疲れたから省略**
+
+## Summing up
+
+**疲れたから省略**
