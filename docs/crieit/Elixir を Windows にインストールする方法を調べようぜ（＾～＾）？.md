@@ -7146,6 +7146,8 @@ iex(1)> KVServer.accept(4040)
 
 📖 [How to unsupress local echo](https://stackoverflow.com/questions/1098503/how-to-unsupress-local-echo)  
 
+（サーバーとは別の）ターミナルを開く  
+
 Command line:  
 
 ```shell
@@ -7187,6 +7189,130 @@ quit
 ![ohkina-hiyoko-futsu2.png](https://crieit.now.sh/upload_images/96fb09724c3ce40ee0861a0fd1da563d61daf8a09d9bc.png)  
 「　エコー・サーバーができたのね」  
 
+📅 2023-04-06 thu 22:54 - 疲れたから今日は終わり  
+
 ## Tasks
 
-📅 2023-04-06 thu 22:54 - 疲れたから今日は終わり  
+📖 [Task and gen_tcp](https://elixir-lang.org/getting-started/mix-otp/task-and-gen-tcp.html)  
+
+📅 2023-04-07 fri 18:39  
+
+📄 `elixir-practice/projects/kv_umbrella/apps/kv_server/lib/kv_server/application.ex` ファイルを更新：  
+
+```elixir
+defmodule KVServer.Application do
+  # See https://hexdocs.pm/elixir/Application.html
+  # for more information on OTP Applications
+  @moduledoc false
+
+  use Application
+
+  @impl true
+  def start(_type, _args) do
+    children = [
+      # Starts a worker by calling: KVServer.Worker.start_link(arg)
+      # {KVServer.Worker, arg}
+
+      # Add (MIX AND OTP / 8. Task and gen_tcp / Tasks)
+      {Task, fn -> KVServer.accept(4040) end}
+    ]
+
+    # See https://hexdocs.pm/elixir/Supervisor.html
+    # for other strategies and supported options
+    opts = [strategy: :one_for_one, name: KVServer.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+end
+```
+
+👇　例：（ポートを引数にする）  
+
+```elixir
+port = String.to_integer(System.get_env("PORT") || "4040")
+# ...
+{Task, fn -> KVServer.accept(port) end}
+```
+
+👆　この改造も入れる  
+
+```shell
+mix run --no-halt
+```
+
+Command line:  
+
+```shell
+# ポート番号を変える
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella\apps\kv_server>set PORT=4321
+
+C:\Users\むずでょ\Documents\GitHub\elixir-practice\projects\kv_umbrella\apps\kv_server>mix run --no-halt
+
+18:59:04.151 [info] Accepting connections on port 4321
+```
+
+👇（サーバーとは別の）ターミナルを開く  
+
+Command line:  
+
+```shell
+telnet 127.0.0.1 4321
+```
+
+ここで `[Ctrl] + "]"` キーを打鍵  
+
+```shell
+set localecho
+```
+
+次に `[Enter]` キーを空打ち  
+
+Input:  
+
+```shell
+say you
+```
+
+Output:  
+
+```shell
+say you
+```
+
+👇　以下、失敗の説明  
+
+👇（さらに別の）ターミナルを開く  
+
+Command line:  
+
+```shell
+# 既に使っているポート番号
+telnet 127.0.0.1 4321
+```
+
+ここで `[Ctrl] + "]"` キーを打鍵  
+
+```shell
+set localecho
+```
+
+次に `[Enter]` キーを空打ち  
+
+Input:  
+
+```shell
+hello
+```
+
+👆　応答なし  
+
+## Task supervisor
+
+
+
+ここで `[Ctrl] + "]"` キーを打鍵  
+
+Input:  
+
+```shell
+quit
+```
