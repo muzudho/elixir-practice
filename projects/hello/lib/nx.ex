@@ -67,6 +67,19 @@ defmodule Hello.Lib.Nx do
     output = Nx.divide(Nx.exp(t), Nx.sum(Nx.exp(t)))
     IO.inspect(output, label: "Softmax")
 
+    #
+    # ソフトマックス
+    # ============
+    #
+    IO.puts("""
+    
+    Soft max (2)
+    ============
+    """)
+
+    output = Hello.Lib.NxSoftmax.softmax(Nx.tensor([1, 2, 3]))
+    IO.inspect(output, label: "Softmax (2)")
+
     # 本来は、スーパーバイザーのPIDを返却する
     {:ok, self()}
   end
