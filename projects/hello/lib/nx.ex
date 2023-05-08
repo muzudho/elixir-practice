@@ -37,12 +37,35 @@ defmodule Hello.Lib.Nx do
 
     # テンソル（リストの中にリストがあるみたいなやつ）を作る
     t = Nx.tensor([[1, 2], [3, 4]])
+
+    #
     # 作ったテンソルの形を聞く
+    # =====================
+    #
+    IO.puts("""
+    
+    Shape
+    =====
+    """)
+
     output = Nx.shape(t)
 
     # 変数の中身が分からないときは IO.inspect() を使う
-    IO.inspect(output, label: "shape")
+    IO.inspect(output, label: "Shape")
     # IO.puts("Output:#{output}")
+
+    #
+    # ソフトマックス
+    # ============
+    #
+    IO.puts("""
+    
+    Soft max
+    ========
+    """)
+
+    output = Nx.divide(Nx.exp(t), Nx.sum(Nx.exp(t)))
+    IO.inspect(output, label: "Softmax")
 
     # 本来は、スーパーバイザーのPIDを返却する
     {:ok, self()}
