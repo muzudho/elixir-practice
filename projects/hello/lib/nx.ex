@@ -33,8 +33,16 @@ defmodule Hello.Lib.Nx do
   Loop.
   """
   def start(_type, _args) do
-    # t = Nx.tensor([[1, 2], [3, 4]])
-    IO.puts("hello")
+    IO.puts("Hello Nx")
+
+    # テンソル（リストの中にリストがあるみたいなやつ）を作る
+    t = Nx.tensor([[1, 2], [3, 4]])
+    # 作ったテンソルの形を聞く
+    output = Nx.shape(t)
+
+    # 変数の中身が分からないときは IO.inspect() を使う
+    IO.inspect(output, label: "shape")
+    # IO.puts("Output:#{output}")
 
     # 本来は、スーパーバイザーのPIDを返却する
     {:ok, self()}
