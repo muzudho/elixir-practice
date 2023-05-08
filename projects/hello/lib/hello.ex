@@ -6,6 +6,9 @@ defmodule Hello do
   @doc """
   Hello world.
 
+    cd projects/hello
+    mix compile
+
   ## Examples
 
       iex> Hello.hello()
