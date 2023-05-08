@@ -7,6 +7,9 @@ defmodule Hello.Lib.NxSoftmax do
   
   """
 
+  @doc """
+    `defn` は Nx.Defn からインポート
+  """
   defn softmax(t) do
     Nx.exp(t) / Nx.sum(Nx.exp(t))
   end
