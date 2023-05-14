@@ -11,6 +11,10 @@ defmodule ProjectForPort.Lib.OpenNotepad do
     IO.puts("Hello, notepad!!")
 
     path = System.find_executable("notepad")
+
+    IO.inspect(path, label: "notepad path")
+    # notepad path: "c:/WINDOWS/system32/notepad.exe"
+
     port = Port.open({:spawn_executable, path}, [:binary])
 
     # ポートを閉じる
