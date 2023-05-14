@@ -10,6 +10,13 @@ defmodule ProjectForProcess.Lib.Main do
   """
   def start(_type, _args) do
 
+    IO.puts("Waiting for messages.")
+
+    receive do
+      {:hello, msg} -> msg
+      {:world, _msg} -> "won't match"
+    end
+
     # 本来は、スーパーバイザーのPIDを返却する
     {:ok, self()}
   end
