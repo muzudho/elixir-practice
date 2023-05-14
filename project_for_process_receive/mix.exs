@@ -1,9 +1,9 @@
-defmodule ProjectForProcess.MixProject do
+defmodule ProjectForProcessReceive.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :project_for_process,
+      app: :project_for_process_receive,
       version: "0.1.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
@@ -17,7 +17,7 @@ defmodule ProjectForProcess.MixProject do
       extra_applications: [:logger],
 
       # 実行するモジュール
-      mod: {ProjectForProcess.Lib.Main, []}
+      mod: {ProjectForProcessReceive.Lib.Main, []}
     ]
   end
 

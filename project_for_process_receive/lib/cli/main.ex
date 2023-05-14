@@ -1,4 +1,4 @@
-defmodule ProjectForProcess.Lib.Main do
+defmodule ProjectForProcessReceive.Lib.Main do
   @moduledoc """
   """
 
