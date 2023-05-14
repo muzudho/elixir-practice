@@ -20,6 +20,10 @@ defmodule ProjectForPort.Lib.OpenNotepad do
     # ポートを閉じる
     send(port, {self(), :close})
 
-    IO.puts("Bye, notepad!!")
+    IO.puts(
+      """
+      Bye, notepad!!
+
+      """)
   end
 end

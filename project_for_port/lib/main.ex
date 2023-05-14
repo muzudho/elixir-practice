@@ -13,6 +13,9 @@ defmodule ProjectForPort.Lib.Main do
     # Windowsメモ帳を開く
     ProjectForPort.Lib.OpenNotepad.do_it()
 
+    # tasklist を開く
+    ProjectForPort.Lib.OpenTasklist.do_it()
+
     IO.puts("Hello, Port.open!!")
 
     #
