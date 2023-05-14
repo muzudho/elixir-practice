@@ -10,6 +10,9 @@ defmodule ProjectForPort.Lib.Main do
   """
   def start(_type, _args) do
 
+    # Windowsメモ帳を開く
+    ProjectForPort.Lib.OpenNotepad.do_it()
+
     IO.puts("Hello, Port.open!!")
 
     #
@@ -29,14 +32,24 @@ defmodule ProjectForPort.Lib.Main do
     # :spawn は便利ですが、名前または引数のいずれかに空白がある実行可能ファイルを呼び出すことは不可能であることを意味します。これらの理由から、ほとんどの場合、 :spawn_executable を実行することをお勧めします。
     #
     # 無理 path = System.find_executable("echo")
-    path = System.find_executable("iex")
-    port = Port.open({:spawn_executable, path}, [:binary, args: ["IO.puts(\"hello world\")"]])
+    # path = System.find_executable("iex")
+    # port = Port.open({:spawn_executable, path}, [:binary, args: ["IO.puts(\"hello world\")"]])
+    path = System.find_executable("notepad")
+    port = Port.open({:spawn_executable, path}, [:binary])
+    # path = System.find_executable("mix")
+    # port = Port.open({:spawn_executable, path}, [:binary, args: ["run"]])
     # port = Port.open({:spawn, "C:\Program Files (x86)\Elixir\bin\iex.bat"}, [:binary])
     # 「hello, echo!!」を引数に渡す
     # send(port, {self(), {:command, "echo abc"}})
     #send(port, {self(), {:command, "hello, echo!!"}})
     # Windows版の Elixir に `flush()` は無い？
-    send(port, {self(), :flush})
+    # iex では flush() 使える
+    # flush()
+    IEx.Helpers.flush()
+    # send(port, {self(), :flush})
+
+
+
     # ポートを閉じる
     send(port, {self(), :close})
     # flush()
