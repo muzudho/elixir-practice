@@ -32,8 +32,11 @@ defmodule ProjectForProcessId.Lib.Main do
     #   ...
     # ]
     for pid <- Process.list do
-      # `#PID<0.0.0>` といった文字列で返ってくる
+      # `#PID<0.0.0>` といった文字列で返ってくる。 String.Chars 型か？
+      # 📖 [String.Chars](https://hexdocs.pm/elixir/1.14.4/String.Chars.html)
       IO.inspect(pid, label: "pid")
+      pid_str = to_string(pid)
+      IO.puts("pid: #{pid_str}")
     end
 
     # 本来は、スーパーバイザーのPIDを返却する
