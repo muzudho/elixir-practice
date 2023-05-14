@@ -20,7 +20,11 @@ defmodule ProjectForPort.Lib.OpenTasklist do
 
     port = Port.open({:spawn_executable, path}, [:binary, args: ["/v", "/fo", "csv"]])
 
-    # TODO しばらく待機したい
+    # しばらく待機したい
+    IO.puts("Please wait for 3 seconds.")
+    Process.sleep(3000)
+
+    # TODO 標準出力を垂れ流すには？
 
     # ポートを閉じる
     send(port, {self(), :close})
