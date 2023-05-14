@@ -11,6 +11,7 @@ defmodule ProjectForProcessSend.Lib.Main do
   def start(_type, _args) do
 
     IO.puts("Send message.")
+    # プロセスId をどうやって取ってくる？
     pid = self()
     IO.inspect(pid, label: "pid")
     send(pid, {:hello, "world"})
