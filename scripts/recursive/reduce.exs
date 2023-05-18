@@ -3,6 +3,11 @@
 #
 #   elixir reduce.exs
 #
+# Input
+# =====
+#
+#   [1, 2, 3]
+#
 # Result
 # ======
 #
