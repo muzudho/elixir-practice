@@ -20,7 +20,7 @@
 # References
 # ==========
 #
-#   📖 [Enum.all](https://hexdocs.pm/elixir/1.14.4/Enum.html#any?/1)
+#   📖 [Enum.any](https://hexdocs.pm/elixir/1.14.4/Enum.html#any?/1)
 #
 
 IO.puts(Enum.any?([false, false, false]))

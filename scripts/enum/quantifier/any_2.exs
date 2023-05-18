@@ -24,7 +24,7 @@
 # References
 # ==========
 #
-#   📖 [Enum.all](https://hexdocs.pm/elixir/1.14.4/Enum.html#any?/2)
+#   📖 [Enum.any](https://hexdocs.pm/elixir/1.14.4/Enum.html#any?/2)
 #
 
 # 第２引数は比較条件。２で割った余りが１か？
