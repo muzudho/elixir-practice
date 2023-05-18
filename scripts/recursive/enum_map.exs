@@ -1,7 +1,7 @@
 # Run
 # ====
 #
-#   elixir enum_reduce.exs
+#   elixir enum_map.exs
 #
 # Input
 # =====
@@ -11,7 +11,7 @@
 # Result
 # ======
 #
-#   6
+#   [2, 4, 6]
 #
 # References
 # ==========
@@ -19,7 +19,7 @@
 #   📖 [Reduce and map algorithms](https://elixir-lang.org/getting-started/recursion.html#reduce-and-map-algorithms)
 #
 
-IO.inspect(Enum.reduce([1, 2, 3], 0, fn(x, acc) -> x + acc end))
+IO.inspect(Enum.map([1, 2, 3], fn(x) -> x * 2 end))
 
 # キャプチャー・シンタックス（Capture syntax） - 難しい書き方
-IO.inspect(Enum.reduce([1, 2, 3], 0, &+/2))
+IO.inspect(Enum.map([1, 2, 3], &(&1 * 2)))
