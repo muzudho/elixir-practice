@@ -20,3 +20,6 @@
 #
 
 IO.inspect(Enum.reduce([1, 2, 3], 0, fn(x, acc) -> x + acc end))
+
+# 難しい書き方
+IO.inspect(Enum.reduce([1, 2, 3], 0, &+/2))
