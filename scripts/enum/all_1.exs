@@ -1,7 +1,7 @@
 # Run
 # ====
 #
-#   elixir all.exs
+#   elixir all_1.exs
 #
 # Input
 # ======
