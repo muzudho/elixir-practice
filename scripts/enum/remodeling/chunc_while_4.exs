@@ -22,19 +22,21 @@
 chunk_fun = fn element, acc ->
   # 2 で割った余りが 0 なら
   if rem(element, 2) == 0 do
-    # 要素を先頭に追加して逆順
+    # コンティニュー（`:cont`; 続行） - 要素を先頭に追加して逆順。チャンクを出力する
     {:cont, Enum.reverse([element | acc]), []}
   else
-    # 要素を先頭に追加
+    # コンティニュー（`:cont`; 続行） - 要素を先頭に追加。チャンクは出力しない
     {:cont, [element | acc]}
   end
 end
 
 # アフター関数
 after_fun = fn
-  # 空リストなら、空リスト
+  # 空リストなら、
+  # コンティニュー（`:cont`; 続行） - 空リストを返す
   [] -> {:cont, []}
-  # そうでなければ逆順のリスト
+  # そうでなければ、
+  # コンティニュー（`:cont`; 続行） - 逆順のリストを返す
   acc -> {:cont, Enum.reverse(acc), []}
 end
 
