@@ -23,7 +23,7 @@
 # References
 # ==========
 #
-#   📖 [Range.new/2](https://hexdocs.pm/elixir/1.14.4/Range.html#new/2)
+#   📖 [Range.shift/2](https://hexdocs.pm/elixir/1.14.4/Range.html#shift/2)
 #
 
 # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] を 1つシフトすると
