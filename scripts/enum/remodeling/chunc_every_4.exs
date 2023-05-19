@@ -1,7 +1,7 @@
 # Run
 # ====
 #
-#   elixir chunc_every_3.exs
+#   elixir chunc_every_4.exs
 #
 # Input
 # ======
