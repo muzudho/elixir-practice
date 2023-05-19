@@ -2,7 +2,7 @@
 # Run
 # ====
 #
-#   elixir functions.exs
+#   elixir disjoint.exs
 #
 
 #
@@ -35,7 +35,7 @@
 # References
 # ==========
 #
-#   📖 [Range](https://hexdocs.pm/elixir/1.14.4/Range.html)
+#   📖 [Range.disjoint/2](https://hexdocs.pm/elixir/1.14.4/Range.html#disjoint?/2)
 #
 
 # - `1..5` と 6..9 は、つながっているか？
