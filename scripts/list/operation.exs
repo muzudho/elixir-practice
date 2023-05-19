@@ -26,3 +26,7 @@ IO.inspect(list)
 list = Enum.reverse([ 4 | list ])
 IO.inspect(list)
 # [1, 2, 3, 4]
+
+# 仕切り直し
+list = [0..10]
+IO.inspect(list)
